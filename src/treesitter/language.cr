@@ -12,13 +12,23 @@ module TreeSitter
     getter source     : String
     getter precedence : Precedence
 
+    property injection_source : String
+    property locals_source    : String
+
     @highlights : Query?
+    @injections : Query?
+    @locals     : Query?
 
     def initialize(@name : String, @raw : LibTreeSitter::TSLanguage, extensions : Enumerable(String) = [] of String,
-                   *, @comment : String? = nil, highlights : String = "", @precedence : Precedence = Precedence::Last)
-      @extensions = extensions.map { |extension| extension.starts_with?('.') ? extension : ".#{extension}" }.to_a
-      @source     = highlights
-      @highlights = nil
+                   *, @comment : String? = nil, highlights : String = "", injections : String = "",
+                   locals : String = "", @precedence : Precedence = Precedence::Last)
+      @extensions       = extensions.map { |extension| extension.starts_with?('.') ? extension : ".#{extension}" }.to_a
+      @source           = highlights
+      @injection_source = injections
+      @locals_source    = locals
+      @highlights       = nil
+      @injections       = nil
+      @locals           = nil
     end
 
     def to_unsafe : LibTreeSitter::TSLanguage
@@ -31,6 +41,30 @@ module TreeSitter
 
     def highlights : Query
       @highlights ||= Query.new(self, @source)
+    end
+
+    def injections? : Query?
+      return nil if @injection_source.empty?
+
+      @injections ||= Query.new(self, @injection_source)
+    end
+
+    def injections=(source : String) : String
+      @injection_source = source
+      @injections = nil
+      source
+    end
+
+    def locals? : Query?
+      return nil if @locals_source.empty?
+
+      @locals ||= Query.new(self, @locals_source)
+    end
+
+    def locals=(source : String) : String
+      @locals_source = source
+      @locals = nil
+      source
     end
 
     def query(source : String) : Query
