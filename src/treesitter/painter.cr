@@ -53,7 +53,7 @@ module TreeSitter
       current = -1
       first   = 0
       row.size.times do |column|
-        kind = kinds.unsafe_fetch(row.marks.unsafe_fetch(column))
+        kind = kinds.unsafe_fetch(row.boundary(column))
         next if kind == current
 
         tokens << Scribe::Token.new(first, column - first, @query.names[current]) if current >= 0
