@@ -6,6 +6,8 @@ require "./treesitter/tree"
 require "./treesitter/parser"
 require "./treesitter/language"
 require "./treesitter/painter"
+require "./treesitter/locals"
+require "./treesitter/injection"
 require "./treesitter/syntax"
 require "./treesitter/tokenizer"
 

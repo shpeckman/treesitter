@@ -38,6 +38,8 @@ module TreeSitter
 
     record Predicate, test : Test, capture : UInt32, other : UInt32?, values : Array(String), regex : Regex?
 
+    alias Properties = Hash(String, String)
+
     getter language : Language
     getter names    : Array(String)
 
@@ -52,6 +54,11 @@ module TreeSitter
       @cursor     = LibTreeSitter.ts_query_cursor_new
       @names      = Array(String).new(LibTreeSitter.ts_query_capture_count(@raw)) { |index| capture_name(index.to_u32) }
       @predicates = Array(Array(Predicate)).new(pattern_count) { |index| compile(index.to_u32) }
+      @settings   = Array(Properties).new(pattern_count) { |index| settings(index.to_u32) }
+    end
+
+    def properties(pattern : Int32) : Properties
+      @settings[pattern]? || Properties.new
     end
 
     def finalize
@@ -133,6 +140,33 @@ module TreeSitter
         end
       end
       found
+    end
+
+    private def settings(pattern : UInt32) : Properties
+      count = 0_u32
+      steps = LibTreeSitter.ts_query_predicates_for_pattern(@raw, pattern, pointerof(count))
+      found = Properties.new
+      group = [] of LibTreeSitter::QueryPredicateStep
+      count.times do |index|
+        step = steps[index]
+        if step.type.done?
+          setting(group, found)
+          group.clear
+        else
+          group << step
+        end
+      end
+      found
+    end
+
+    private def setting(steps : Array(LibTreeSitter::QueryPredicateStep), into : Properties) : Nil
+      head = steps.first? || return
+      return unless head.type.string? && string_value(head.value_id) == "set!"
+
+      words = steps[1..].select(&.type.string?).map { |step| string_value(step.value_id) }
+      return if words.size < 2
+
+      into[words[0]] = words[1]
     end
 
     private def predicate(steps : Array(LibTreeSitter::QueryPredicateStep)) : Predicate?

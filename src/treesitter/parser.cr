@@ -23,6 +23,23 @@ module TreeSitter
       @language = language
     end
 
+    def included_ranges=(ranges : Array(Region)) : Array(Region)
+      if ranges.empty?
+        LibTreeSitter.ts_parser_set_included_ranges(@raw, Pointer(LibTreeSitter::Range).null, 0_u32)
+        return ranges
+      end
+
+      native = ranges.map do |region|
+        LibTreeSitter::Range.new(
+          start_point: LibTreeSitter::Point.new(row: region.first_row.to_u32, column: 0_u32),
+          end_point: LibTreeSitter::Point.new(row: region.last_row.to_u32, column: 0_u32),
+          start_byte: region.start_byte.to_u32,
+          end_byte: region.end_byte.to_u32)
+      end
+      LibTreeSitter.ts_parser_set_included_ranges(@raw, native.to_unsafe, native.size.to_u32)
+      ranges
+    end
+
     def parse(text : String, old : Tree? = nil) : Tree
       tree = LibTreeSitter.ts_parser_parse_string(@raw, old.try(&.to_unsafe) || Pointer(Void).null, text, text.bytesize.to_u32)
       raise Error.new("tree-sitter could not parse the #{@language.name} text") if tree.null?

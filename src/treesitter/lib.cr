@@ -86,6 +86,7 @@ lib LibTreeSitter
   fun ts_parser_set_language(parser : TSParser, language : TSLanguage) : Bool
   fun ts_parser_parse(parser : TSParser, old_tree : TSTree, input : Input) : TSTree
   fun ts_parser_parse_string(parser : TSParser, old_tree : TSTree, string : UInt8*, length : UInt32) : TSTree
+  fun ts_parser_set_included_ranges(parser : TSParser, ranges : Range*, count : UInt32) : Bool
 
   fun ts_tree_copy(tree : TSTree) : TSTree
   fun ts_tree_root_node(tree : TSTree) : Node

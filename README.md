@@ -57,7 +57,7 @@ TreeSitter.language_for("x/main.c")   # by extension, or nil
 TreeSitter.languages
 ```
 
-A `Language` has a `name`, its `extensions`, a line `comment` prefix (for `Scribe::Document#comment`), and its `highlights` query, compiled on first use.
+A `Language` has a `name`, its `extensions`, a line `comment` prefix (for `Scribe::Document#comment`), its `highlights` query, compiled on first use, and optional `injections` and `locals` queries, which are empty for the bundled grammars and settable at any time.
 
 **Your own grammars.** Link the grammar's compiled `parser.c` (and `scanner.c`) into your program, bind its `tree_sitter_<name>` function, and register it. A registered language wins the extensions it lists:
 
@@ -97,7 +97,7 @@ query.each_capture(tree.root, buffer, from_byte, to_byte) { |capture| }
 query.each_match(tree.root, text) { |pattern, captures| }
 ```
 
-A malformed query raises `TreeSitter::QueryError` with its `kind` and a line and column in the message. These predicates are applied: `#eq?` and `#not-eq?` (against a string or another capture), `#match?` and `#not-match?` (a regular expression), and `#any-of?` and `#not-any-of?`. Others, such as `#set!`, are ignored. A query keeps one cursor, so do not run a query again from inside its own block.
+A malformed query raises `TreeSitter::QueryError` with its `kind` and a line and column in the message. These predicates are applied: `#eq?` and `#not-eq?` (against a string or another capture), `#match?` and `#not-match?` (a regular expression), and `#any-of?` and `#not-any-of?`. A `#set!` directive is not a filter: its key and value are read per pattern and available as `query.properties(pattern)`, which is how injections name their language. Other predicates are ignored. A query keeps one cursor, so do not run a query again from inside its own block.
 
 ## Highlighting a document
 
@@ -131,6 +131,45 @@ TreeSitter::Tokenizer.for("src/app.cr", graphemes)   # by extension, or nil
 
 It parses the text on every call and keeps nothing, so use `Syntax` for anything being edited. Both share one painter, so a given language and query produce the same tokens either way.
 
+## Injections
+
+A language can carry an `injections.scm` query, and `Syntax` then parses each injected region with the other grammar and merges its tokens over the host's. A region is parsed through tree-sitter's included ranges, so the nested nodes report offsets in the host document and the tokens land on the right columns.
+
+```crystal
+TreeSitter.language("python").injections = <<-SCM
+  ((string (string_content) @injection.content) (#set! injection.language "json"))
+  SCM
+
+syntax.injections            # => [TreeSitter::Injection]
+syntax.tokens(buffer, 1)     # the host's tokens, with the region's replaced
+```
+
+The language comes from a `(#set! injection.language "name")` property or from an `@injection.language` capture whose text names it. A region whose language is unknown, or the same as the host's, is skipped; the regions are recollected after a reparse. `Language.new(…, injections: source)` sets the query at construction, and `injections?` compiles it on first use.
+
+An `Injection` can also be built by hand when a host knows the region itself:
+
+```crystal
+TreeSitter::Injection.new(TreeSitter.language("json"), TreeSitter::Region.new(5, 9, 0, 0)).tokens(buffer, 0)
+```
+
+## Locals
+
+A `locals.scm` query marks definitions, references and scopes, and `Syntax` uses it to refine a token whose text resolves to a local — so a local reads as a variable rather than a call.
+
+```crystal
+TreeSitter.language("python").locals = <<-SCM
+  (function_definition) @local.scope
+  (assignment left: (identifier) @local.definition)
+  (identifier) @local.reference
+  SCM
+
+scopes = syntax.locals        # nil without a query
+scopes.try(&.defined?("value"))
+scopes.try(&.local?(byte))
+```
+
+`refine(kind, byte)` is what the token pass calls: a reference to a known definition becomes `variable`, and anything already styled as a variable is left alone. The captures are `@local.definition`, `@local.reference` and `@local.scope`.
+
 ## Using it with tui
 
 `tui`'s `Editor` takes any `Scribe::TokenSource` and styles a token with `editor.<kind>`, through every prefix of a dotted name: a `keyword.return` token gets `editor.keyword` merged with `editor.keyword.return`. Stock styles cover the common first segments (`keyword`, `string`, `comment`, `number`, `type`, `module`, `function`, `constant`, `boolean`, `property`, `label`, `escape`, `operator`); a theme can add or refine any capture. `tui`'s `Markdown` takes `Scribe::Tokenizer` values for its fenced code blocks, keyed by fence label.
@@ -155,6 +194,8 @@ make spec
 ```
 
 `make spec` builds the native parts if needed and runs the specs. `make clean` removes them. The highlight queries are compiled into the program from `queries/` when it is built.
+
+The bundled grammars ship a highlights query only; injection and locals queries are a host's to supply, through `language.injections=` and `language.locals=` or `Language.new`.
 
 **Vendored files.** `vendor/tree-sitter-deps.tar.gz` holds the tree-sitter 0.28 runtime and the five grammars' generated parsers, as vendored by [ts-edit](https://github.com/shpeckman/ts-edit). Each `queries/<language>/highlights.scm` is copied unchanged from its grammar's repository, at the commit whose `src/grammar.json` matches the vendored grammar, and sits next to that grammar's `LICENSE` (all MIT):
 
