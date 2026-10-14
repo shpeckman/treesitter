@@ -1,0 +1,21 @@
+# shard.yml
+name: treesitter
+version: 0.1.0
+
+authors:
+  - shpeckman
+
+description: |
+  A minimal tree-sitter binding for Crystal with bundled grammars and incremental syntax highlighting
+  for scribe documents.
+
+crystal: ">= 1.21.0"
+
+license: MIT
+
+dependencies:
+  scribe:
+    github: shpeckman/scribe
+
+scripts:
+  postinstall: make native
