@@ -1,0 +1,9 @@
+# .gitignore
+/docs/
+/lib/
+/bin/
+/.shards/
+/vendor/deps/
+/vendor/build/
+shard.lock
+*.dwarf
