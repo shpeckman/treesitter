@@ -37,7 +37,7 @@ def kinds(source : Scribe::TokenSource, buffer : Scribe::Buffer, line : Int32) :
   source.tokens(buffer, line).map { |token| {row.slice(token.start, token.stop), token.kind} }
 end
 
-def fresh_tokens(subject : Scribe::Document, language : TreeSitter::Language) : Array(Array(Scribe::Highlighter::Token))
+def fresh_tokens(subject : Scribe::Document, language : TreeSitter::Language) : Array(Array(Scribe::Token))
   copy   = document(subject.value)
   syntax = TreeSitter::Syntax.new(copy, language)
   Array.new(copy.buffer.line_count) { |line| syntax.tokens(copy.buffer, line) }
