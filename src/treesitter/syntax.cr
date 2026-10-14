@@ -12,13 +12,13 @@ module TreeSitter
     getter language : Language
     getter query    : Query
 
-    @parser  : Parser
-    @tree    : Tree
-    @stale   : Bool
-    @lines   : Array(Array(Scribe::Highlighter::Token)?)
-    @paints  : Array(Paint)
-    @kinds   : Array(Int32)
-    @stop    : Proc(Nil)?
+    @parser : Parser
+    @tree   : Tree
+    @stale  : Bool
+    @lines  : Array(Array(Scribe::Highlighter::Token)?)
+    @paints : Array(Paint)
+    @kinds  : Array(Int32)
+    @stop   : Proc(Nil)?
 
     def self.for(document : Scribe::Document, path : String) : Syntax?
       TreeSitter.language_for(path).try { |language| new(document, language) }
@@ -74,7 +74,7 @@ module TreeSitter
     private def refresh : Nil
       return unless @stale
 
-      fresh  = @parser.parse(@document.buffer, @tree)
+      fresh = @parser.parse(@document.buffer, @tree)
       @tree.changed_ranges(fresh).each do |region|
         last = Math.min(region.last_row, @lines.size - 1)
         (region.first_row..last).each { |row| @lines[row] = nil }
@@ -84,8 +84,8 @@ module TreeSitter
     end
 
     private def paint(buffer : Scribe::Buffer, line : Int32) : Array(Scribe::Highlighter::Token)
-      row   = buffer.line(line)
-      size  = row.bytesize
+      row  = buffer.line(line)
+      size = row.bytesize
       return NONE if size == 0
 
       start = buffer.line_byte(line)

@@ -159,7 +159,7 @@ module TreeSitter
     def changed_ranges(newer : Tree) : Array(Region)
       count  = 0_u32
       ranges = LibTreeSitter.ts_tree_get_changed_ranges(@raw, newer, pointerof(count))
-      found  = Array(Region).new(count) do |index|
+      found = Array(Region).new(count) do |index|
         range = ranges[index]
         Region.new(range.start_byte.to_i32, range.end_byte.to_i32, range.start_point.row.to_i32, range.end_point.row.to_i32)
       end

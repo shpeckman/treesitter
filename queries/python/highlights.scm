@@ -1,3 +1,4 @@
+; queries/python/highlights.scm
 ; Identifier naming conventions
 
 (identifier) @variable

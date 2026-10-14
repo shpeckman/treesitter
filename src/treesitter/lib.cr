@@ -1,10 +1,10 @@
 # src/treesitter/lib.cr
 @[Link(ldflags: "#{__DIR__}/../../vendor/build/libgrammars.a #{__DIR__}/../../vendor/build/libtree-sitter.a")]
 lib LibTreeSitter
-  alias TSParser      = Void*
-  alias TSTree        = Void*
-  alias TSLanguage    = Void*
-  alias TSQuery       = Void*
+  alias TSParser = Void*
+  alias TSTree = Void*
+  alias TSLanguage = Void*
+  alias TSQuery = Void*
   alias TSQueryCursor = Void*
 
   struct Point

@@ -1,3 +1,4 @@
+; queries/c/highlights.scm
 (identifier) @variable
 
 ((identifier) @constant
