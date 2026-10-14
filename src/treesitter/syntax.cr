@@ -50,6 +50,23 @@ module TreeSitter
       @lines[line] ||= @painter.paint(@tree.root, buffer, line)
     end
 
+    def fold_ranges(minimum : Int32 = 1) : Array({Int32, Int32})
+      found = {} of Int32 => Int32
+      stack = [root]
+
+      while node = stack.pop?
+        node.named_children.each do |child|
+          first = child.start_point.line
+          last  = child.end_point.line
+          last -= 1 if child.end_point.column == 0 && last > first
+          found[first] = last if last - first >= minimum && (found[first]? || first) < last
+          stack << child
+        end
+      end
+
+      found.keys.sort.map { |first| {first, found[first]} }
+    end
+
     def node_at(offset : Int32, named : Bool = true) : Node?
       byte = @document.buffer.byte_offset(offset)
       root.descendant(byte, byte, named)

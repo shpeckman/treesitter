@@ -135,3 +135,33 @@ describe TreeSitter::Tokenizer do
     TreeSitter::Tokenizer.for("src/app.cobol", Plain.new).should be_nil
   end
 end
+
+describe "TreeSitter::Syntax fold ranges" do
+  it "offers every multi-line node as a fold, one per starting line" do
+    subject = document("def run(x)\n  if x\n    1\n  end\nend")
+    syntax  = TreeSitter::Syntax.new(subject, TreeSitter.language("crystal"))
+    found   = syntax.fold_ranges
+
+    found.map(&.first).should eq(found.map(&.first).sort)
+    found.map(&.first).uniq.size.should eq(found.size)
+    found.should contain({0, 4})
+    found.any? { |(first, last)| first == 1 && last >= 3 }.should be_true
+  end
+
+  it "drives a view's folds" do
+    subject = document("def run\n  1\n  2\nend\nx = 1")
+    syntax  = TreeSitter::Syntax.new(subject, TreeSitter.language("crystal"))
+    subject.view.folds.replace(syntax.fold_ranges)
+
+    subject.view.folds.empty?.should be_false
+    subject.view.folds.collapsed?(0).should be_true
+    subject.view.folds.hidden?(1).should be_true
+    subject.view.layout.row_count.should be < 5
+  end
+
+  it "skips single-line nodes" do
+    subject = document(%({"a": 1}))
+    syntax  = TreeSitter::Syntax.new(subject, TreeSitter.language("json"))
+    syntax.fold_ranges.should be_empty
+  end
+end

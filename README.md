@@ -108,6 +108,13 @@ A malformed query raises `TreeSitter::QueryError` with its `kind` and a line and
 - A token's `kind` is the capture name, such as `keyword.return` or `string.special.key`. Columns count clusters, like every other scribe token. Captures whose names start with `_` are skipped.
 - The resolving of overlapping captures into one token per run lives in `Painter`, shared with `Tokenizer`.
 - `tree`, `root` and `node_at(offset, named: true)` give the current syntax tree. `close` stops listening.
+- `fold_ranges` offers every multi-line named node as a line range, one per starting line, ready for a view's folds:
+
+```crystal
+document.view.folds.replace(syntax.fold_ranges)
+```
+
+  `fold_ranges(minimum: 2)` asks for folds of at least that many extra lines. It reads the tree, so it needs no query file and works for every grammar.
 
 A different query, for example your own `highlights.scm`, can be passed as the third argument.
 
