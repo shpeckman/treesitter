@@ -111,3 +111,27 @@ describe TreeSitter::Syntax do
     kinds(source, subject.buffer, 0).should eq([{"null", "constant.builtin"}])
   end
 end
+
+describe TreeSitter::Tokenizer do
+  it "tokenizes standalone text through scribe's Tokenizer interface" do
+    marker = TreeSitter.language("json").tokenizer(Plain.new).as(Scribe::Tokenizer)
+    found  = marker.tokens(%({"a": 1}\n[null]))
+    found.size.should eq(2)
+    found[0].map(&.kind).should contain("string.special.key")
+    found[1].map(&.kind).should contain("constant.builtin")
+  end
+
+  it "agrees with Syntax on the same text" do
+    text   = "def run\n  @x = \"hi\"\nend"
+    marker = TreeSitter.language("crystal").tokenizer(Plain.new)
+    subject = document(text)
+    syntax  = TreeSitter::Syntax.new(subject, TreeSitter.language("crystal"))
+    direct  = Array.new(subject.buffer.line_count) { |line| syntax.tokens(subject.buffer, line) }
+    marker.tokens(text).should eq(direct)
+  end
+
+  it "builds a tokenizer from a path" do
+    TreeSitter::Tokenizer.for("src/app.cr", Plain.new).should_not be_nil
+    TreeSitter::Tokenizer.for("src/app.cobol", Plain.new).should be_nil
+  end
+end

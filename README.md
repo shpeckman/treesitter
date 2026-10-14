@@ -2,7 +2,9 @@
 
 A minimal [tree-sitter](https://tree-sitter.github.io/) binding for Crystal, with bundled grammars and incremental syntax highlighting for [scribe](https://github.com/shpeckman/scribe) documents.
 
-It parses text into syntax trees, runs queries over them (with the common predicates), and keeps a tree in step with a `Scribe::Document` as it is edited, serving highlight tokens line by line. It draws nothing: tokens are plain values for the host — a terminal UI such as [tui](https://github.com/shpeckman/tui), or anything else — to style.
+It parses text into syntax trees, runs queries over them (with the common predicates), and keeps a tree in step with a `Scribe::Document` as it is edited, serving highlight tokens line by line. It also tokenizes standalone strings, for snippets with no document behind them. It draws nothing: tokens are plain values for the host — a terminal UI such as [tui](https://github.com/shpeckman/tui), or anything else — to style.
+
+This shard is where syntax highlighting lives for the scribe family: scribe defines `Scribe::Token` and the `TokenSource` and `Tokenizer` interfaces and nothing more, and the two classes here implement them.
 
 It depends only on scribe, the standard library, and the tree-sitter runtime and grammars it builds from source.
 
@@ -32,7 +34,7 @@ document = Scribe::Document.new(graphemes, File.read("src/app.cr"), filter: Scri
 syntax   = TreeSitter::Syntax.for(document, "src/app.cr")   # nil when no bundled language fits the path
 
 if syntax
-  syntax.tokens(document.buffer, 0)   # Array(Scribe::Highlighter::Token): start, count, kind ("keyword", "function.method", …)
+  syntax.tokens(document.buffer, 0)   # Array(Scribe::Token): start, count, kind ("keyword", "function.method", …)
   document.insert("x")                # the tree follows the edit
   syntax.root.has_error?              # reparsed on demand
 end
@@ -104,13 +106,27 @@ A malformed query raises `TreeSitter::QueryError` with its `kind` and a line and
 - Each change is applied to the tree as it lands. The tree is reparsed once, lazily, the next time tokens or the tree are asked for, so a burst of typing costs one reparse per frame.
 - Tokens are cached per line. An edit forgets the lines it touched, and a reparse forgets the lines whose syntax changed, such as everything after a newly opened block comment.
 - A token's `kind` is the capture name, such as `keyword.return` or `string.special.key`. Columns count clusters, like every other scribe token. Captures whose names start with `_` are skipped.
+- The resolving of overlapping captures into one token per run lives in `Painter`, shared with `Tokenizer`.
 - `tree`, `root` and `node_at(offset, named: true)` give the current syntax tree. `close` stops listening.
 
 A different query, for example your own `highlights.scm`, can be passed as the third argument.
 
+## Tokenizing standalone text
+
+`Syntax` needs a document. For text a host merely holds as a string — a fenced code block, a diff hunk, a log line — `Tokenizer` implements `Scribe::Tokenizer` instead, returning one array of tokens per line:
+
+```crystal
+marker = TreeSitter.language("crystal").tokenizer(graphemes)
+marker.tokens("def f\n  1\nend")      # => [[Token(0, 3, "keyword"), …], [...], [...]]
+
+TreeSitter::Tokenizer.for("src/app.cr", graphemes)   # by extension, or nil
+```
+
+It parses the text on every call and keeps nothing, so use `Syntax` for anything being edited. Both share one painter, so a given language and query produce the same tokens either way.
+
 ## Using it with tui
 
-`tui`'s `Editor` takes any `Scribe::TokenSource` and styles a token with `editor.<kind>`, through every prefix of a dotted name: a `keyword.return` token gets `editor.keyword` merged with `editor.keyword.return`. Stock styles cover the common first segments (`keyword`, `string`, `comment`, `number`, `type`, `module`, `function`, `constant`, `boolean`, `property`, `label`, `escape`, `operator`); a theme can add or refine any capture.
+`tui`'s `Editor` takes any `Scribe::TokenSource` and styles a token with `editor.<kind>`, through every prefix of a dotted name: a `keyword.return` token gets `editor.keyword` merged with `editor.keyword.return`. Stock styles cover the common first segments (`keyword`, `string`, `comment`, `number`, `type`, `module`, `function`, `constant`, `boolean`, `property`, `label`, `escape`, `operator`); a theme can add or refine any capture. `tui`'s `Markdown` takes `Scribe::Tokenizer` values for its fenced code blocks, keyed by fence label.
 
 ```crystal
 def highlight(editor : TUI::Editor, path : String) : TreeSitter::Syntax?
@@ -119,6 +135,10 @@ def highlight(editor : TUI::Editor, path : String) : TreeSitter::Syntax?
   editor.comment      = syntax.language.comment
   syntax
 end
+
+TUI::Markdown.new(ctx, source: text, tokenizers: {
+  "cr" => TreeSitter.language("crystal").tokenizer(TUI::TextGraphemes.new).as(Scribe::Tokenizer),
+})
 ```
 
 ## Development

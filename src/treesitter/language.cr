@@ -41,6 +41,10 @@ module TreeSitter
       Parser.new(self)
     end
 
+    def tokenizer(graphemes : Scribe::Graphemes, query : Query? = nil) : Tokenizer
+      Tokenizer.new(self, graphemes, query)
+    end
+
     def parse(text : String) : Tree
       parser.parse(text)
     end
