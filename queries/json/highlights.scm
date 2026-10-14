@@ -1,3 +1,4 @@
+; queries/json/highlights.scm
 (pair
   key: (_) @string.special.key)
 

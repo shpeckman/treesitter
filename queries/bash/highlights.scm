@@ -1,3 +1,4 @@
+; queries/bash/highlights.scm
 [
   (string)
   (raw_string)

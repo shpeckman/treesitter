@@ -1,3 +1,4 @@
+; queries/crystal/highlights.scm
 (identifier) @variable
 
 ((constant) @constant

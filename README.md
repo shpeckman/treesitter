@@ -40,13 +40,13 @@ end
 
 ## Languages
 
-| Name | Extensions | Comment | Grammar |
-| --- | --- | --- | --- |
-| `bash` | `.sh`, `.bash` | `#` | [tree-sitter-bash](https://github.com/tree-sitter/tree-sitter-bash) |
-| `c` | `.c`, `.h` | `//` | [tree-sitter-c](https://github.com/tree-sitter/tree-sitter-c) |
-| `crystal` | `.cr` | `#` | [tree-sitter-crystal](https://github.com/crystal-lang-tools/tree-sitter-crystal) |
-| `json` | `.json` | — | [tree-sitter-json](https://github.com/tree-sitter/tree-sitter-json) |
-| `python` | `.py`, `.pyi` | `#` | [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python) |
+| Name      | Extensions     | Comment | Grammar                                                                          |
+|-----------|----------------|---------|----------------------------------------------------------------------------------|
+| `bash`    | `.sh`, `.bash` | `#`     | [tree-sitter-bash](https://github.com/tree-sitter/tree-sitter-bash)              |
+| `c`       | `.c`, `.h`     | `//`    | [tree-sitter-c](https://github.com/tree-sitter/tree-sitter-c)                    |
+| `crystal` | `.cr`          | `#`     | [tree-sitter-crystal](https://github.com/crystal-lang-tools/tree-sitter-crystal) |
+| `json`    | `.json`        | —       | [tree-sitter-json](https://github.com/tree-sitter/tree-sitter-json)              |
+| `python`  | `.py`, `.pyi`  | `#`     | [tree-sitter-python](https://github.com/tree-sitter/tree-sitter-python)          |
 
 ```crystal
 TreeSitter.language("crystal")        # raises TreeSitter::Error for an unknown name
@@ -131,13 +131,13 @@ make spec
 
 **Vendored files.** `vendor/tree-sitter-deps.tar.gz` holds the tree-sitter 0.28 runtime and the five grammars' generated parsers, as vendored by [ts-edit](https://github.com/shpeckman/ts-edit). Each `queries/<language>/highlights.scm` is copied unchanged from its grammar's repository, at the commit whose `src/grammar.json` matches the vendored grammar, and sits next to that grammar's `LICENSE` (all MIT):
 
-| Language | Query commit |
-| --- | --- |
-| bash | `a06c2e4415e9bc0346c6b86d401879ffb44058f7` |
-| c | `b780e47fc780ddc8da13afa35a3f4ed5c157823d` |
-| crystal | `f5530b7608392aaf219a0c76cfa668b1086677ec` |
-| json | `254c42a6476413b776221e03982ac8ae159eeb72` |
-| python | `26855eabccb19c6abf499fbc5b8dc7cc9ab8bc64` |
+| Language | Query commit                               |
+|----------|--------------------------------------------|
+| bash     | `a06c2e4415e9bc0346c6b86d401879ffb44058f7` |
+| c        | `b780e47fc780ddc8da13afa35a3f4ed5c157823d` |
+| crystal  | `f5530b7608392aaf219a0c76cfa668b1086677ec` |
+| json     | `254c42a6476413b776221e03982ac8ae159eeb72` |
+| python   | `26855eabccb19c6abf499fbc5b8dc7cc9ab8bc64` |
 
 ## License
 
