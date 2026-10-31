@@ -1,0 +1,19 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crystal-lang/install-crystal@v1
+      - run: git clone --depth 1 --branch v0.25.2 https://github.com/tree-sitter/tree-sitter.git /tmp/tree-sitter
+      - run: make -C /tmp/tree-sitter && sudo make -C /tmp/tree-sitter install PREFIX=/usr && sudo ldconfig
+      - run: shards install
+      - run: crystal spec

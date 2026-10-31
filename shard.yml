@@ -1,0 +1,17 @@
+# shard.yml
+name: treesitter
+version: 0.1.0
+
+authors:
+  - shpeckman
+
+description: |
+  Crystal bindings to the Tree-sitter C library: grammars loaded at run time, incremental parsing from strings or
+  chunked readers, syntax tree nodes and queries with predicates.
+
+crystal: ">= 1.21.0"
+
+libraries:
+  tree-sitter: ">= 0.25.0"
+
+license: MIT
