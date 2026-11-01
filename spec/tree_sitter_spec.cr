@@ -64,6 +64,46 @@ describe TreeSitter::Parser do
     array.child(array.child_count - 1).not_nil!.missing?.should be_true
   end
 
+  it "reports the regions whose syntax changed" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    tree = parser.parse("[1, 2]")
+    tree.edit(TreeSitter::Edit.new(start_byte: 4, old_end_byte: 5, new_end_byte: 7,
+      start_point: TreeSitter::Point.new(0, 4), old_end_point: TreeSitter::Point.new(0, 5),
+      new_end_point: TreeSitter::Point.new(0, 7)))
+    fresh = parser.parse("[1, \"a\"]", tree)
+    regions = fresh.changed_regions(tree)
+    regions.should_not be_empty
+    regions.all? { |region| region.start_byte >= 4 && region.end_byte <= 7 }.should be_true
+    regions.first.start_point.row.should eq(0)
+  end
+
+  it "parses only the included regions" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    text = "xx [1] yy {} zz"
+    node = parser.parse("[1]").root
+    regions = [TreeSitter::Region.new(3, 6, TreeSitter::Point.new(0, 3), TreeSitter::Point.new(0, 6)),
+               TreeSitter::Region.new(10, 12, TreeSitter::Point.new(0, 10), TreeSitter::Point.new(0, 12))]
+    parser.included_regions = regions
+    root = parser.parse(text).root
+    root.has_error?.should be_false
+    types(root).should eq(%w(document array number object))
+    node.region.range.should eq(0...3)
+    parser.included_regions = [] of TreeSitter::Region
+    parser.parse(text).root.has_error?.should be_true
+  end
+
+  it "stops a parse when asked to cancel and starts over afterwards" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    text = "[" + (["1"] * 20_000).join(", ") + "]"
+    bytes = text.to_slice
+    read = ->(byte : Int32) { byte < bytes.size ? bytes[byte..] : Bytes.empty }
+    parser.parse(nil, cancel: ->(_byte : Int32) { true }) { |byte| read.call(byte) }.should be_nil
+    seen = 0
+    tree = parser.parse(nil, cancel: ->(byte : Int32) { seen = byte; false }) { |byte| read.call(byte) }
+    tree.not_nil!.root.named_child(0).not_nil!.named_child_count.should eq(20_000)
+    seen.should be > 0
+  end
+
   it "finds the smallest node spanning a byte range" do
     root = TreeSitter::Parser.new(JSON_GRAMMAR).parse("[10, 20]").root
     root.named_descendant(6, 6).not_nil!.range.should eq(5...7)
@@ -129,6 +169,18 @@ describe TreeSitter::Query do
     error.kind.should eq(TreeSitter::QueryError::Kind::NodeType)
     error.offset.should eq(13)
     error.message.not_nil!.should contain("line 2")
+  end
+
+  it "reads set! properties per pattern and skips them as predicates" do
+    query = TreeSitter::Query.new(JSON_GRAMMAR, <<-SCM)
+      ((string) @a (#set! injection.language "lua") (#set! injection.combined))
+      ((number) @b (#set! @b priority "90"))
+      SCM
+    query.properties(0).should eq({"injection.language" => "lua", "injection.combined" => ""})
+    query.properties(1).should eq({"priority" => "90"})
+    names = [] of String
+    query.each_capture(TreeSitter::Parser.new(JSON_GRAMMAR).parse(%(["x", 1])).root, %(["x", 1])) { |capture| names << capture.name }
+    names.should eq(%w(a b))
   end
 
   it "translates Lua patterns" do

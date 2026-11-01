@@ -10,20 +10,20 @@ shard.yml                    no shard deps; crystal >= 1.21.0; libtree-sitter >=
 src/treesitter.cr            entry: requires src/tree_sitter/* in dependency order; documents module TreeSitter
 src/fixture.cr               `require "treesitter/fixture"`: TreeSitter::Fixture (compiles fixtures/<name>/parser.c with cc into a temp .so)
 src/tree_sitter/
-  lib.cr                     LibTreeSitter: @[Link("tree-sitter")], the C structs (Point, InputEdit, Node, Input, QueryCapture, QueryMatch, QueryPredicateStep) and the functions used
+  lib.cr                     LibTreeSitter: @[Link("tree-sitter")], the C structs (Point, Range, InputEdit, Node, Input, ParseState, ParseOptions, QueryCapture, QueryMatch, QueryPredicateStep) and the functions used
   error.cr                   Error; QueryError (offset, Kind, line in the message)
-  values.cr                  Point (row, byte column), Edit (bytes + points, to_lib)
+  values.cr                  Point (row, byte column), Edit (bytes + points, to_lib), Region (bytes + points, to_lib, of)
   language.cr                Language: wraps a TSLanguage pointer (ABI check MIN_ABI..MAX_ABI), Language.load (dlopen + dlsym, never closed)
-  tree.cr                    Tree: root, edit, copy; ts_tree_delete in finalize
-  node.cr                    Node: value over LibTreeSitter::Node + its Tree; navigation returns nil for null nodes
-  parser.cr                  Parser: parse(string), parse { |byte| bytes } through a TSInput read callback (Reader boxed as payload)
+  tree.cr                    Tree: root, edit, changed_regions (ts_tree_get_changed_ranges, freed with LibC.free), copy; ts_tree_delete in finalize
+  node.cr                    Node: value over LibTreeSitter::Node + its Tree (region for included regions); navigation returns nil for null nodes
+  parser.cr                  Parser: parse(string), parse { |byte| bytes } through a TSInput read callback (Reader boxed as payload), parse(old, cancel:) through ts_parser_parse_with_options (reset after a cancel), included_regions=
   source.cr                  Source (text(from, to) in bytes), StringSource
-  predicate.cr               Predicate: TESTS table (name → {Test, negated, lua}), LUA_CLASSES, list (parse steps per pattern), lua translation, satisfied?
-  query.cr                   Capture, Match records; Query: compile, capture_names, each_capture (next_capture, verdict cached per match id), each_match, byte ranges
+  predicate.cr               Predicate: TESTS table (name → {Test, negated, lua}), LUA_CLASSES, list (parse steps per pattern), properties (#set! groups), lua translation, satisfied?
+  query.cr                   Capture, Match records; Query: compile, capture_names, properties (per pattern), each_capture (next_capture, verdict cached per match id), each_match, byte ranges
 fixtures/json/               tree-sitter-json parser.c + tree_sitter/*.h (ABI 14, MIT, LICENSE kept), only for specs
 spec/
   spec_helper.cr             JSON_GRAMMAR from the fixture; types(node) helper
-  tree_sitter_spec.cr        Language, Parser (string, reader, incremental, errors, descendants), Query (captures, ranges, predicates, errors, Lua)
+  tree_sitter_spec.cr        Language, Parser (string, reader, incremental, changed regions, included regions, cancel, errors, descendants), Query (captures, ranges, predicates, properties, errors, Lua)
 ```
 
 ## Commands
@@ -43,8 +43,9 @@ crystal spec spec/tree_sitter_spec.cr:42
   - `Tree`, `Parser` and `Query` own their C objects and free them in `finalize`.
   - `Node` holds its `Tree`, so a node never outlives the tree's memory.
   - `Language.load` never `dlclose`s, because trees and queries keep pointers into the grammar's tables.
-- **Reading input.** `Parser#parse(&)` hands C a non-closure callback; the block lives in a `Reader` boxed as the payload. `Reader` keeps the last chunk in `@held` so the GC cannot free the bytes C is still reading.
+- **Reading input.** `Parser#parse(&)` hands C a non-closure callback; the block lives in a `Reader` boxed as the payload. `Reader` keeps the last chunk in `@held` so the GC cannot free the bytes C is still reading. The `cancel:` overload boxes its proc the same way as the `TSParseOptions` payload, and calls `ts_parser_reset` after a cancelled parse, so the next parse never resumes a stale one.
 - **Predicates are data.**
+  - `#set!` directives are not tests: `Predicate.properties` collects them per pattern into `Query#properties`.
   - `Predicate::TESTS` maps each name to `{Test, negated, lua}`; a new spelling is a new row.
   - Predicates are parsed once per pattern at `Query.new`, with regexes compiled there.
   - `each_capture` evaluates a match's predicates once per match id, not once per capture.

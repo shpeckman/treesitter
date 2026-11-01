@@ -22,6 +22,13 @@ lib LibTreeSitter
     tree    : Void*
   end
 
+  struct Range
+    start_point : Point
+    end_point   : Point
+    start_byte  : UInt32
+    end_byte    : UInt32
+  end
+
   enum InputEncoding
     UTF8
     UTF16LE
@@ -36,6 +43,19 @@ lib LibTreeSitter
     read     : ReadFunction
     encoding : InputEncoding
     decode   : Void*
+  end
+
+  struct ParseState
+    payload             : Void*
+    current_byte_offset : UInt32
+    has_error           : Bool
+  end
+
+  alias ProgressFunction = ParseState* -> Bool
+
+  struct ParseOptions
+    payload           : Void*
+    progress_callback : ProgressFunction
   end
 
   struct QueryCapture
@@ -75,12 +95,16 @@ lib LibTreeSitter
   fun ts_parser_delete(parser : Void*)
   fun ts_parser_set_language(parser : Void*, language : Void*) : Bool
   fun ts_parser_parse(parser : Void*, old_tree : Void*, input : Input) : Void*
+  fun ts_parser_parse_with_options(parser : Void*, old_tree : Void*, input : Input, options : ParseOptions) : Void*
+  fun ts_parser_set_included_ranges(parser : Void*, ranges : Range*, count : UInt32) : Bool
+  fun ts_parser_reset(parser : Void*)
   fun ts_parser_parse_string(parser : Void*, old_tree : Void*, string : UInt8*, length : UInt32) : Void*
 
   fun ts_tree_copy(tree : Void*) : Void*
   fun ts_tree_delete(tree : Void*)
   fun ts_tree_root_node(tree : Void*) : Node
   fun ts_tree_edit(tree : Void*, edit : InputEdit*)
+  fun ts_tree_get_changed_ranges(old_tree : Void*, new_tree : Void*, length : UInt32*) : Range*
 
   fun ts_node_type(node : Node) : UInt8*
   fun ts_node_start_byte(node : Node) : UInt32

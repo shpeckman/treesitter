@@ -18,6 +18,17 @@ module TreeSitter
       LibTreeSitter.ts_tree_edit(@pointer, pointerof(raw))
     end
 
+    # Where the syntax differs between *old*, edited to match this tree's text, and this tree. Text edited without a
+    # change in structure is not included, so a highlighter also refreshes the edited lines.
+    def changed_regions(old : Tree) : Array(Region)
+      count = 0_u32
+      pointer = LibTreeSitter.ts_tree_get_changed_ranges(old, @pointer, pointerof(count))
+      return [] of Region if pointer.null?
+      found = Array(Region).new(count.to_i) { |index| Region.of(pointer[index]) }
+      LibC.free(pointer.as(Void*))
+      found
+    end
+
     # An independent copy, cheap to make, for use on another fiber or as a snapshot.
     def copy : Tree
       Tree.new(LibTreeSitter.ts_tree_copy(@pointer))

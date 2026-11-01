@@ -27,14 +27,31 @@ module TreeSitter
     # slice at the end). Each chunk must stay unchanged until the next call; the parser keeps the last one alive.
     def parse(old_tree : Tree? = nil, &read : Int32 -> Bytes) : Tree
       reader = Reader.new(read)
-      input = LibTreeSitter::Input.new(payload: Box.box(reader), encoding: LibTreeSitter::InputEncoding::UTF8,
-        decode: Pointer(Void).null,
-        read: ->(payload : Void*, byte : UInt32, _point : LibTreeSitter::Point, size : UInt32*) {
-          chunk = Box(Reader).unbox(payload).call(byte.to_i)
-          size.value = chunk.size.to_u32
-          chunk.to_unsafe
+      tree(LibTreeSitter.ts_parser_parse(@pointer, old(old_tree), input(reader)))
+    end
+
+    # Parses like `parse(old_tree, &read)`, asking *cancel* with the byte reached as it goes; returns `nil` when
+    # *cancel* returned `true`, and the next parse starts over.
+    def parse(old_tree : Tree?, *, cancel : Int32 -> Bool, &read : Int32 -> Bytes) : Tree?
+      reader = Reader.new(read)
+      options = LibTreeSitter::ParseOptions.new(payload: Box.box(cancel),
+        progress_callback: ->(state : LibTreeSitter::ParseState*) {
+          Box(Int32 -> Bool).unbox(state.value.payload).call(state.value.current_byte_offset.to_i)
         })
-      tree(LibTreeSitter.ts_parser_parse(@pointer, old(old_tree), input))
+      pointer = LibTreeSitter.ts_parser_parse_with_options(@pointer, old(old_tree), input(reader), options)
+      return Tree.new(pointer) unless pointer.null?
+      LibTreeSitter.ts_parser_reset(@pointer)
+      nil
+    end
+
+    # Limits the following parses to *regions*, in text order and not overlapping, as for a language embedded in
+    # another one's text; an empty array parses everything again. Raises `Error` when the library rejects them.
+    def included_regions=(regions : Array(Region)) : Array(Region)
+      raw = regions.map(&.to_lib)
+      unless LibTreeSitter.ts_parser_set_included_ranges(@pointer, raw.to_unsafe, raw.size.to_u32)
+        raise Error.new("parser rejected included regions")
+      end
+      regions
     end
 
     # The C pointer.
@@ -48,6 +65,16 @@ module TreeSitter
 
     private def old(tree : Tree?) : Void*
       tree ? tree.to_unsafe : Pointer(Void).null
+    end
+
+    private def input(reader : Reader) : LibTreeSitter::Input
+      LibTreeSitter::Input.new(payload: Box.box(reader), encoding: LibTreeSitter::InputEncoding::UTF8,
+        decode: Pointer(Void).null,
+        read: ->(payload : Void*, byte : UInt32, _point : LibTreeSitter::Point, size : UInt32*) {
+          chunk = Box(Reader).unbox(payload).call(byte.to_i)
+          size.value = chunk.size.to_u32
+          chunk.to_unsafe
+        })
     end
 
     private def tree(pointer : Void*) : Tree

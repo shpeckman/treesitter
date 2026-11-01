@@ -3,7 +3,7 @@
 module TreeSitter
   # A text test on a query pattern, checked against the captured nodes' text before a match is reported: `#eq?`,
   # `#match?`, `#any-of?`, their `not-` forms and the `vim-` and `lua-` spellings of `#match?`. Directives (`#set!`)
-  # and unknown predicates are skipped, so the pattern matches as if they were absent.
+  # and unknown predicates are skipped, so the pattern matches as if they were absent; `Query#properties` reads `#set!`.
   struct Predicate
     # What a predicate compares.
     enum Test
@@ -59,22 +59,43 @@ module TreeSitter
     def initialize(@test : Test, @negated : Bool, @capture : Int32, @other : Int32?, @values : Array(String), @regex : Regex?)
     end
 
+    # Directive that sets a pattern property.
+    SET = "set!"
+
     # The predicates of *pattern* in the query at *query*, in source order.
     def self.list(query : Void*, pattern : Int32) : Array(Predicate)
+      found = [] of Predicate
+      each_group(query, pattern) { |group| build(query, group).try { |predicate| found << predicate } }
+      found
+    end
+
+    # The `#set!` properties of *pattern* in the query at *query*: key → value (`""` when the directive gives none).
+    # A capture operand (`#set! @x key value`) is skipped.
+    def self.properties(query : Void*, pattern : Int32) : Hash(String, String)
+      found = {} of String => String
+      each_group(query, pattern) do |group|
+        head = group.first? || next
+        next unless head.step_type.string? && string(query, head.value_id) == SET
+        words = group[1..].select(&.step_type.string?).map { |step| string(query, step.value_id) }
+        key = words.first? || next
+        found[key] = words[1]? || ""
+      end
+      found
+    end
+
+    private def self.each_group(query : Void*, pattern : Int32, & : Array(LibTreeSitter::QueryPredicateStep) ->) : Nil
       count = 0_u32
       steps = LibTreeSitter.ts_query_predicates_for_pattern(query, pattern.to_u32, pointerof(count))
-      found = [] of Predicate
       group = [] of LibTreeSitter::QueryPredicateStep
       count.times do |index|
         step = steps[index]
         if step.step_type.done?
-          build(query, group).try { |predicate| found << predicate }
-          group.clear
+          yield group
+          group = [] of LibTreeSitter::QueryPredicateStep
         else
           group << step
         end
       end
-      found
     end
 
     # A regular expression for the Lua pattern *pattern*: `%` classes become ranges and `-` outside a set becomes a

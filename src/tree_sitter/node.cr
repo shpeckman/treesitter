@@ -42,6 +42,11 @@ module TreeSitter
       Point.of(LibTreeSitter.ts_node_end_point(@raw))
     end
 
+    # The node's bytes and points as a `Region`, for `Parser#included_regions=`.
+    def region : Region
+      Region.new(start_byte, end_byte, start_point, end_point)
+    end
+
     # Whether the grammar names this node (rules, not anonymous tokens such as `","`).
     def named? : Bool
       LibTreeSitter.ts_node_is_named(@raw)

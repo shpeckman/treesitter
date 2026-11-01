@@ -25,4 +25,23 @@ module TreeSitter
         new_end_point: @new_end_point.to_lib)
     end
   end
+
+  # A stretch of text as bytes and points: what `Tree#changed_regions` reports and `Parser#included_regions=` takes.
+  record Region, start_byte : Int32, end_byte : Int32, start_point : Point, end_point : Point do
+    # The byte range.
+    def range : Range(Int32, Int32)
+      @start_byte...@end_byte
+    end
+
+    # The C form of this region.
+    def to_lib : LibTreeSitter::Range
+      LibTreeSitter::Range.new(start_byte: @start_byte.to_u32, end_byte: @end_byte.to_u32,
+        start_point: @start_point.to_lib, end_point: @end_point.to_lib)
+    end
+
+    # The region a C range describes.
+    def self.of(range : LibTreeSitter::Range) : Region
+      new(range.start_byte.to_i, range.end_byte.to_i, Point.of(range.start_point), Point.of(range.end_point))
+    end
+  end
 end
