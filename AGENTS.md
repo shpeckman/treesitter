@@ -62,7 +62,7 @@ crystal spec spec/tree_sitter_spec.cr:42
 - Repository: `github.com/shpeckman/treesitter`. It is checked out in `asekii-lib/vendor/`; the workspace is not a repository.
 - Dependency order: treesitter → asekii-editor. Push and tag it before asekii-editor.
 - One logical change per commit.
-- Releases: the maintainer bumps `version` in `shard.yml`, tags `v<version>` and pushes the tag. Agents never bump, tag or push.
+- Releases: the maintainer bumps `version` in `shard.yml`, tags `v<version>` and pushes the tag. Agents never bump `version` or tag. They commit, push, open and merge pull requests and rerun CI only when the user asks, following the Git and GitHub flow in the workspace's `AGENTS.md` (`asekii-lib/AGENTS.md`).
 - `shard.lock` stays untracked (`.gitignore`).
 
 ## Code standards
