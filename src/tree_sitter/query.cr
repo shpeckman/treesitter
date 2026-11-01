@@ -40,11 +40,17 @@ module TreeSitter
       end
       @pattern_count = LibTreeSitter.ts_query_pattern_count(@pointer).to_i
       @predicates = Array(Array(Predicate)).new(@pattern_count) { |pattern| Predicate.list(@pointer, pattern) }
+      @properties = Array(Hash(String, String)).new(@pattern_count) { |pattern| Predicate.properties(@pointer, pattern) }
     end
 
     # The predicates of *pattern*.
     def predicates(pattern : Int32) : Array(Predicate)
       @predicates[pattern]
+    end
+
+    # The `#set!` properties of *pattern* (`injection.language` → `"lua"`); a key set without a value maps to `""`.
+    def properties(pattern : Int32) : Hash(String, String)
+      @properties[pattern]
     end
 
     # Yields every capture under *node* in text order, within the byte *range* when given, skipping matches whose

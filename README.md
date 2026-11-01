@@ -47,6 +47,7 @@ pair.field("value").not_nil!.start_point   # => TreeSitter::Point.new(0, 6)
 | --- | --- |
 | `parse(text, old_tree = nil)` | A string |
 | `parse(old_tree = nil) { \|byte\| bytes }` | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end |
+| `parse(old_tree, cancel: ->(byte : Int32) { … }) { \|byte\| bytes }` | Chunks as above, asking `cancel` with the byte reached as it goes; returns `nil` once it answers `true` (a time budget, a newer edit), and the next parse starts over |
 
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises `Error` when the parse does not finish.
 
@@ -58,6 +59,18 @@ tree.edit(TreeSitter::Edit.new(start_byte: 5, old_end_byte: 5, new_end_byte: 8,
   start_point: TreeSitter::Point.new(0, 5), old_end_point: TreeSitter::Point.new(0, 5),
   new_end_point: TreeSitter::Point.new(0, 8)))
 tree = parser.parse("[1, 2, 3]", tree)
+```
+
+`new_tree.changed_regions(old_tree)` lists the `Region`s (bytes and points) whose syntax differs between the edited
+old tree and the new one; text edited inside an unchanged structure is not among them.
+
+`parser.included_regions = regions` limits the following parses to those regions of the text, in order and not
+overlapping, for a language embedded in another one (a `<script>` in HTML, a fenced block in Markdown); an empty array
+parses the whole text again. `Node#region` gives a node's region.
+
+```crystal
+parser.included_regions = [script.region]
+inner = parser.parse(text)
 ```
 
 Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte column. `Tree#copy` makes an independent copy, cheap to make, for use on another fiber.
@@ -109,6 +122,10 @@ A query the grammar rejects raises `QueryError`, which carries its `kind` (`Synt
 | `#any-of? @a "x" "y"` | Is one of the strings |
 
 Each predicate has a `not-` form (`#not-eq?`, …). A capture missing from the match passes. Directives (`#set!`, `#make-range!`), unknown predicates and a `#match?` whose expression does not compile are skipped, so the match is reported as if they were absent.
+
+`query.properties(pattern)` holds the `#set!` directives of a pattern as key → value (`""` when a key is set without
+one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`. Read it with `match.pattern` or
+`capture.pattern`.
 
 ## Spec fixture
 
