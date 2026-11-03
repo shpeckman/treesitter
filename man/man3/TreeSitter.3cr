@@ -17,6 +17,8 @@ queries with the common predicates (\fB\%Query\fR). Offsets are bytes into UTF\-
 .SH "DEFINED IN"
 src/fixture.cr
 .br
+src/tree_sitter/detector.cr
+.br
 src/tree_sitter/error.cr
 .br
 src/tree_sitter/language.cr
@@ -38,6 +40,7 @@ src/tree_sitter/values.cr
 src/treesitter.cr
 .SH "SEE ALSO"
 .BR "TreeSitter::Capture" (3cr),
+.BR "TreeSitter::Detector" (3cr),
 .BR "TreeSitter::Edit" (3cr),
 .BR "TreeSitter::Error" (3cr),
 .BR "TreeSitter::Fixture" (3cr),
