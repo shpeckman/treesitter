@@ -318,12 +318,6 @@ Parses UTF\-8 text with one \fB\%Language\fR into a \fB\%Tree\fR.
 .BR "TreeSitter::Point" (3cr)
 A position in the text: a zero\-based row and a byte column within it.
 .TP
-.BR "TreeSitter::Predicate" (3cr)
-A text test on a query pattern, checked against the captured nodes\(aq text before a match is reported: \fB\%#eq?\fR, \fB\%#match?\fR, \fB\%#any\-of?\fR, their \fB\%not\-\fR forms and the \fB\%vim\-\fR and \fB\%lua\-\fR spellings of \fB\%#match?\fR.
-.TP
-.BR "TreeSitter::Predicate::Test" (3cr)
-What a predicate compares.
-.TP
 .BR "TreeSitter::Query" (3cr)
 A compiled query (S\-expression patterns with \fB\%@captures\fR and predicates) for one \fB\%Language\fR.
 .TP

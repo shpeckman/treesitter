@@ -15,17 +15,11 @@ A position in the text: a zero\-based row and a byte column within it.
 .SH "CONSTRUCTORS"
 .PP
 \fBdef self.new(row : Int32, column : Int32)\fR
-.TP 4
-\fBdef self.of(point : LibTreeSitter::Point) : Point\fR
-The point a C point describes.
 .SH "INSTANCE METHODS"
 .PP
 \fBdef column : Int32\fR
 .PP
 \fBdef row : Int32\fR
-.TP 4
-\fBdef to_lib : LibTreeSitter::Point\fR
-The C form of this point.
 .SH "DEFINED IN"
 src/tree_sitter/values.cr
 .SH "SEE ALSO"

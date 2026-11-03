@@ -1,21 +1,15 @@
 # src/tree_sitter/predicate.cr
 
 module TreeSitter
-  # A text test on a query pattern, checked against the captured nodes' text before a match is reported: `#eq?`,
-  # `#match?`, `#any-of?`, their `not-` forms and the `vim-` and `lua-` spellings of `#match?`. Directives (`#set!`)
-  # and unknown predicates are skipped, so the pattern matches as if they were absent; `Query#properties` reads `#set!`.
+  # :nodoc:
   struct Predicate
-    # What a predicate compares.
     enum Test
-      # The capture's text equals a string or another capture's text.
       Eq
-      # The capture's text matches a regular expression.
       Match
-      # The capture's text is one of several strings.
       AnyOf
     end
 
-    # Predicate name → `{test, negated, Lua pattern}`.
+    # Predicate name → {test, negated, Lua pattern}. Directives and unknown names are absent, so they are skipped.
     TESTS = {
       "eq?"            => {Test::Eq, false, false},
       "not-eq?"        => {Test::Eq, true, false},
@@ -29,7 +23,7 @@ module TreeSitter
       "not-any-of?"    => {Test::AnyOf, true, false},
     }
 
-    # Lua character class letter → the regular expression range it stands for (uppercase negates).
+    # Lua class letter → regular expression range; the uppercase letter negates it.
     LUA_CLASSES = {
       'a' => "A-Za-z",
       'c' => "\\x00-\\x1f\\x7f",
@@ -43,34 +37,26 @@ module TreeSitter
       'x' => "0-9A-Fa-f",
     }
 
-    # The comparison.
     getter test : Test
-    # Whether the result is inverted.
     getter? negated : Bool
-    # Capture id whose text is tested.
     getter capture : Int32
     # Capture id compared against, for `#eq?` between two captures.
     getter other : Int32?
-    # String operands.
     getter values : Array(String)
-    # Compiled pattern of a `Match` test.
     getter regex : Regex?
 
     def initialize(@test : Test, @negated : Bool, @capture : Int32, @other : Int32?, @values : Array(String), @regex : Regex?)
     end
 
-    # Directive that sets a pattern property.
     SET = "set!"
 
-    # The predicates of *pattern* in the query at *query*, in source order.
     def self.list(query : Void*, pattern : Int32) : Array(Predicate)
       found = [] of Predicate
       each_group(query, pattern) { |group| build(query, group).try { |predicate| found << predicate } }
       found
     end
 
-    # The `#set!` properties of *pattern* in the query at *query*: key → value (`""` when the directive gives none).
-    # A capture operand (`#set! @x key value`) is skipped.
+    # A capture operand (`#set! @x key value`) is skipped; a key without a value maps to "".
     def self.properties(query : Void*, pattern : Int32) : Hash(String, String)
       found = {} of String => String
       each_group(query, pattern) do |group|
@@ -98,8 +84,7 @@ module TreeSitter
       end
     end
 
-    # A regular expression for the Lua pattern *pattern*: `%` classes become ranges and `-` outside a set becomes a
-    # lazy `*?`.
+    # `%` classes become ranges and `-` outside a set becomes a lazy `*?`.
     def self.lua(pattern : String) : String
       String.build do |io|
         inside = false
@@ -128,8 +113,7 @@ module TreeSitter
       end
     end
 
-    # Whether the match whose *captures* came from *tree* passes this test, reading text from *source*. A capture
-    # absent from the match passes.
+    # A capture absent from the match passes.
     def satisfied?(captures : Slice(LibTreeSitter::QueryCapture), tree : Tree, source : Source) : Bool
       text = text_of(@capture, captures, tree, source) || return true
       result = case @test

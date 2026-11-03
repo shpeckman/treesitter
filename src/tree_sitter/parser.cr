@@ -7,6 +7,7 @@ module TreeSitter
     # The grammar in use.
     getter language : Language
 
+    # A parser for *language*; raises `Error` when the library rejects the grammar.
     def initialize(@language : Language)
       @pointer = LibTreeSitter.ts_parser_new
       self.language = @language
@@ -54,11 +55,12 @@ module TreeSitter
       regions
     end
 
-    # The C pointer.
+    # :nodoc:
     def to_unsafe : Void*
       @pointer
     end
 
+    # :nodoc:
     def finalize
       LibTreeSitter.ts_parser_delete(@pointer)
     end

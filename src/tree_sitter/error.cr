@@ -23,6 +23,7 @@ module TreeSitter
     # The kind of problem.
     getter kind : Kind
 
+    # :nodoc:
     def initialize(@offset : Int32, @kind : Kind, source : String)
       line = source.byte_slice(0, @offset).count('\n') + 1
       super("#{@kind} error in query at byte #{@offset} (line #{line})")

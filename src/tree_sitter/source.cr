@@ -12,6 +12,7 @@ module TreeSitter
   struct StringSource
     include Source
 
+    # A source over *string*.
     def initialize(@string : String)
     end
 

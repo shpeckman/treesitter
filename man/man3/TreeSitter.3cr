@@ -46,7 +46,6 @@ src/treesitter.cr
 .BR "TreeSitter::Node" (3cr),
 .BR "TreeSitter::Parser" (3cr),
 .BR "TreeSitter::Point" (3cr),
-.BR "TreeSitter::Predicate" (3cr),
 .BR "TreeSitter::Query" (3cr),
 .BR "TreeSitter::QueryError" (3cr),
 .BR "TreeSitter::Region" (3cr),

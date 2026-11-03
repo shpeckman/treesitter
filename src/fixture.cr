@@ -8,7 +8,7 @@ module TreeSitter
   module Fixture
     # Where the compiled libraries go; removed by `clean`.
     DIRECTORY = File.join(Dir.tempdir, "treesitter-fixture-#{Process.pid}")
-    # Sources of the bundled grammars.
+    # :nodoc:
     SOURCES = File.expand_path("../fixtures", __DIR__)
 
     # The shared library of the bundled grammar *name* (`"json"`), compiled on first use; raises `Error` when `cc` fails.

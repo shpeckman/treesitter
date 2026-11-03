@@ -13,9 +13,6 @@ TreeSitter::Tree \- A syntax tree made by \fB\%Parser#parse\fR.
 .PP
 A syntax tree made by \fB\%Parser#parse\fR. Edit it with \fB\%edit\fR before passing it back to \fB\%parse\fR as the old tree, so
 unchanged parts are reused. Freed when collected; the \fB\%Node\fRs taken from it keep it alive.
-.SH "CONSTRUCTORS"
-.PP
-\fBdef self.new(pointer : Pointer(Void))\fR
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef changed_regions(old : Tree) : Array(Region)\fR
@@ -30,9 +27,6 @@ Adjusts the tree\(aqs positions for \fIedit\fR, which already happened to the te
 .TP 4
 \fBdef root : Node\fR
 The root node.
-.TP 4
-\fBdef to_unsafe : Pointer(Void)\fR
-The C pointer.
 .SH "DEFINED IN"
 src/tree_sitter/tree.cr
 .SH "SEE ALSO"

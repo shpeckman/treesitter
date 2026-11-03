@@ -52,9 +52,6 @@ The grammar\(aqs ABI version.
 .TP 4
 \fBdef name : String | Nil\fR
 The name given when loading, if any.
-.TP 4
-\fBdef to_unsafe : Pointer(Void)\fR
-The C pointer.
 .SH "DEFINED IN"
 src/tree_sitter/language.cr
 .SH "SEE ALSO"

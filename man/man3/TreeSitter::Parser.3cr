@@ -14,8 +14,9 @@ TreeSitter::Parser \- Parses UTF\-8 text with one \fB\%Language\fR into a \fB\%T
 Parses UTF\-8 text with one \fB\%Language\fR into a \fB\%Tree\fR. Passing the previous tree, edited with \fB\%Tree#edit\fR, makes
 the parse incremental. A parser is not safe to share between threads; use one per fiber that parses.
 .SH "CONSTRUCTORS"
-.PP
+.TP 4
 \fBdef self.new(language : Language)\fR
+A parser for \fIlanguage\fR; raises \fB\%Error\fR when the library rejects the grammar.
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef included_regions=(regions : Array(Region)) : Array(Region)\fR
@@ -38,9 +39,6 @@ slice at the end). Each chunk must stay unchanged until the next call; the parse
 \fBdef parse(old_tree : Tree | Nil, *, cancel : Int32 \-> Bool, &read : Int32 \-> Bytes) : Tree | Nil\fR
 Parses like \fB\%parse(old_tree, \%&read)\fR, asking \fIcancel\fR with the byte reached as it goes; returns \fB\%nil\fR when
 \fIcancel\fR returned \fB\%true\fR, and the next parse starts over.
-.TP 4
-\fBdef to_unsafe : Pointer(Void)\fR
-The C pointer.
 .SH "DEFINED IN"
 src/tree_sitter/parser.cr
 .SH "SEE ALSO"

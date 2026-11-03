@@ -41,14 +41,8 @@ The grammar the query was compiled for.
 \fBdef pattern_count : Int32\fR
 Number of patterns.
 .TP 4
-\fBdef predicates(pattern : Int32) : Array(Predicate)\fR
-The predicates of \fIpattern\fR.
-.TP 4
 \fBdef properties(pattern : Int32) : Hash(String, String)\fR
 The \fB\%#set!\fR properties of \fIpattern\fR (\fB\%injection.language\fR \[u2192] \fB\%"lua"\fR); a key set without a value maps to \fB\%""\fR.
-.TP 4
-\fBdef to_unsafe : Pointer(Void)\fR
-The C pointer.
 .SH "DEFINED IN"
 src/tree_sitter/query.cr
 .SH "SEE ALSO"

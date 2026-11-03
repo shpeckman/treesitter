@@ -13,9 +13,6 @@ TreeSitter::Node \- A node of a \fB\%Tree\fR: its type, byte range, points and n
 .PP
 A node of a \fB\%Tree\fR: its type, byte range, points and neighbors. Navigation returns \fB\%nil\fR where there is no node.
 A node is a value; it stays valid while its tree is not edited.
-.SH "CONSTRUCTORS"
-.PP
-\fBdef self.new(raw : LibTreeSitter::Node, tree : Tree)\fR
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef ==(other : Node) : Bool\fR
@@ -89,9 +86,6 @@ Byte offset where the node starts.
 .TP 4
 \fBdef start_point : Point\fR
 Where the node starts.
-.TP 4
-\fBdef to_unsafe : LibTreeSitter::Node\fR
-The C value.
 .TP 4
 \fBdef tree : Tree\fR
 The tree this node belongs to.
