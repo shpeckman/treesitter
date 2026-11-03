@@ -14,4 +14,7 @@ crystal: ">= 1.21.0"
 libraries:
   tree-sitter: ">= 0.25.0"
 
+scripts:
+  postinstall: crystal run scripts/man.cr -- install
+
 license: MIT
