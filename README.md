@@ -144,22 +144,12 @@ TreeSitter::Fixture.clean             # removes the compiled libraries
 
 ## Man pages
 
-`man/` holds man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and one section 3 page per type, such as `TreeSitter::Node(3cr)`. When the shard is installed as a dependency, its `postinstall` script copies them to `$XDG_DATA_HOME/man` (by default `~/.local/share/man`). Add that directory to `MANPATH` if `man` does not search it.
+`man/` holds man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and one section 3 page per type, such as `TreeSitter::Node(3cr)`. Read them from the installed shard:
 
 ```sh
-man TreeSitter::Parser
-man -l lib/treesitter/man/man3/TreeSitter::Parser.3cr   # without installing
+man -M lib/treesitter/man TreeSitter::Parser
+man -l lib/treesitter/man/man3/TreeSitter::Parser.3cr
 ```
-
-`scripts/man.cr` manages the pages and runs from any directory:
-
-| Command                                   | Does                                                                                                                                          |
-|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| `crystal run scripts/man.cr -- generate`  | Writes the pages into `man/` from `crystal docs --format json`; unchanged pages keep their file and date, pages of removed types are deleted |
-| `crystal run scripts/man.cr -- install`   | Copies the pages to the manual directory                                                                                                      |
-| `crystal run scripts/man.cr -- uninstall` | Removes those pages from the manual directory                                                                                                 |
-
-`-o DIR` sets the pages directory (relative to the shard root, default `man`) and `-d DIR` the manual directory. `SOURCE_DATE_EPOCH` sets the date of rewritten pages. From a project that depends on the shard, run `crystal run lib/treesitter/scripts/man.cr -- uninstall` to remove the installed pages.
 
 ## License
 
