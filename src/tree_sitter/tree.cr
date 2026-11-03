@@ -4,6 +4,7 @@ module TreeSitter
   # A syntax tree made by `Parser#parse`. Edit it with `edit` before passing it back to `parse` as the old tree, so
   # unchanged parts are reused. Freed when collected; the `Node`s taken from it keep it alive.
   class Tree
+    # :nodoc:
     def initialize(@pointer : Void*)
     end
 
@@ -34,11 +35,12 @@ module TreeSitter
       Tree.new(LibTreeSitter.ts_tree_copy(@pointer))
     end
 
-    # The C pointer.
+    # :nodoc:
     def to_unsafe : Void*
       @pointer
     end
 
+    # :nodoc:
     def finalize
       LibTreeSitter.ts_tree_delete(@pointer)
     end

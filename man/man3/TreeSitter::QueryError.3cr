@@ -15,9 +15,6 @@ Raised by \fB\%Query.new\fR for a query the grammar rejects, with the byte \fB\%
 problem.
 .SH "INHERITANCE"
 TreeSitter::QueryError < TreeSitter::Error < Exception < Reference < Object
-.SH "CONSTRUCTORS"
-.PP
-\fBdef self.new(offset : Int32, kind : Kind, source : String)\fR
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef kind : Kind\fR

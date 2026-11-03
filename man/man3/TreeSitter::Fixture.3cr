@@ -17,9 +17,6 @@ directory on first use. Not loaded by \fB\%require \%"treesitter"\fR.
 .TP 4
 \fBDIRECTORY = File.join(Dir.tempdir, "treesitter\-fixture\-#{Process.pid}")\fR
 Where the compiled libraries go; removed by \fB\%clean\fR.
-.TP 4
-\fBSOURCES = File.expand_path("../fixtures", "src")\fR
-Sources of the bundled grammars.
 .SH "CLASS METHODS"
 .TP 4
 \fBdef self.clean : Nil\fR

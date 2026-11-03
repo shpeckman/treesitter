@@ -1,5 +1,6 @@
 # src/tree_sitter/lib.cr
 
+# :nodoc:
 @[Link("tree-sitter")]
 lib LibTreeSitter
   struct Point

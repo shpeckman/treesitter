@@ -63,7 +63,7 @@ module TreeSitter
       LibTreeSitter.ts_language_abi_version(@pointer).to_i
     end
 
-    # The C pointer.
+    # :nodoc:
     def to_unsafe : Void*
       @pointer
     end

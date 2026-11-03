@@ -15,8 +15,9 @@ A \fB\%Source\fR over one string.
 .SH "INCLUDED MODULES"
 \fBTreeSitter::Source\fR
 .SH "CONSTRUCTORS"
-.PP
+.TP 4
 \fBdef self.new(string : String)\fR
+A source over \fIstring\fR.
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef text(from : Int32, to : Int32) : String\fR

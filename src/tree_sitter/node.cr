@@ -7,6 +7,7 @@ module TreeSitter
     # The tree this node belongs to.
     getter tree : Tree
 
+    # :nodoc:
     def initialize(@raw : LibTreeSitter::Node, @tree : Tree)
     end
 
@@ -139,7 +140,7 @@ module TreeSitter
       LibTreeSitter.ts_node_eq(@raw, other.to_unsafe)
     end
 
-    # The C value.
+    # :nodoc:
     def to_unsafe : LibTreeSitter::Node
       @raw
     end

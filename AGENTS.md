@@ -89,7 +89,8 @@ for page in man/man*/*; do groff -man -t -ww -z "$page"; done   # roff warnings
 - Comments:
   - Every file starts with a comment holding its path, e.g. `# src/tree_sitter/query.cr`, followed by a blank line, so `crystal docs` never takes it as the doc of the first declaration.
   - Public types, modules, enums, records, API constants and public methods get doc comments for `crystal docs`: Markdown, directly above the declaration, one or two sentences that say what it does, returns or means (units, ranges, side effects). Refer to other API in backticks (`Tree#edit`) so the doc tool links it.
-  - Private code gets a plain comment only where the reason is not obvious from the code. Use comments sparingly: no section banners, no commented-out code, no change notes.
+  - Public declarations that are internal get `# :nodoc:` alone, so `crystal docs` and the man pages leave them out. These are `LibTreeSitter`, `Predicate` and `Query#predicates`, the C interop (`to_unsafe`, `to_lib`, `Point.of`, `Region.of`, the `Node`/`Tree` pointer constructors), `finalize`, `QueryError.new` and `Fixture::SOURCES`.
+  - Private and `:nodoc:` code gets a plain comment only where the reason is not obvious from the code. Use comments sparingly: no section banners, no commented-out code, no change notes.
 - Keep the user-facing API ergonomic.
 - Prevent shotgun surgery: one concept, one place.
 - Match the surrounding style: aligned assignments, explicit return types, `@[AlwaysInline]` on hot accessors.

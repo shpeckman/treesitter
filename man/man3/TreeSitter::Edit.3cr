@@ -29,9 +29,6 @@ where the new text ends, as bytes and as points.
 \fBdef start_byte : Int32\fR
 .PP
 \fBdef start_point : Point\fR
-.TP 4
-\fBdef to_lib : LibTreeSitter::InputEdit\fR
-The C form of this edit.
 .SH "DEFINED IN"
 src/tree_sitter/values.cr
 .SH "SEE ALSO"

@@ -43,7 +43,7 @@ module TreeSitter
       @properties = Array(Hash(String, String)).new(@pattern_count) { |pattern| Predicate.properties(@pointer, pattern) }
     end
 
-    # The predicates of *pattern*.
+    # :nodoc:
     def predicates(pattern : Int32) : Array(Predicate)
       @predicates[pattern]
     end
@@ -98,11 +98,12 @@ module TreeSitter
       each_match(node, StringSource.new(source), range) { |match| yield match }
     end
 
-    # The C pointer.
+    # :nodoc:
     def to_unsafe : Void*
       @pointer
     end
 
+    # :nodoc:
     def finalize
       LibTreeSitter.ts_query_delete(@pointer)
     end
