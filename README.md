@@ -39,7 +39,14 @@ pair.field("value").not_nil!.start_point   # => TreeSitter::Point.new(0, 6)
 
 ### Languages
 
-`Language.load(path, name, symbol = "tree_sitter_<name>")` opens a grammar library and calls its entry function; dashes in the name become underscores in the default symbol. It raises `TreeSitter::Error` when the library or the symbol is missing, or when the grammar's ABI is outside `Language::MIN_ABI..Language::MAX_ABI` (13 to 15). A grammar linked into the program can be wrapped directly: `Language.new(tree_sitter_json(), "json")`. Loaded libraries stay open for the life of the process.
+`Language.load(name)` finds and loads a grammar from `Language.directories`. Lookup checks each directory in order for `libtree-sitter-<name>.so` and `<name>.so`; `Language.find(name)` returns the matching path or `nil`. The default directories are `~/.local/lib`, `/usr/local/lib`, `/usr/local/lib64`, `/usr/lib`, and `/usr/lib64`. Replace, append to, or prepend to the array to configure lookup:
+
+```crystal
+TreeSitter::Language.directories.unshift("/opt/tree-sitter")
+json = TreeSitter::Language.load("json")
+```
+
+`Language.load(name)` raises `TreeSitter::Error` when no library is found. `Language.load(path, name, symbol = "tree_sitter_<name>")` opens an explicit grammar library and calls its entry function; dashes in the name become underscores in the default symbol. Both forms raise `TreeSitter::Error` when the library or symbol is missing, or when the grammar's ABI is outside `Language::MIN_ABI..Language::MAX_ABI` (13 to 15). A grammar linked into the program can be wrapped directly: `Language.new(tree_sitter_json(), "json")`. Loaded libraries stay open for the life of the process.
 
 ### Parsing
 

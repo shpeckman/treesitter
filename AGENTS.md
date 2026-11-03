@@ -13,7 +13,7 @@ src/tree_sitter/
   lib.cr                     LibTreeSitter: @[Link("tree-sitter")], the C structs (Point, Range, InputEdit, Node, Input, ParseState, ParseOptions, QueryCapture, QueryMatch, QueryPredicateStep) and the functions used
   error.cr                   Error; QueryError (offset, Kind, line in the message)
   values.cr                  Point (row, byte column), Edit (bytes + points, to_lib), Region (bytes + points, to_lib, of)
-  language.cr                Language: wraps a TSLanguage pointer (ABI check MIN_ABI..MAX_ABI), Language.load (dlopen + dlsym, never closed)
+  language.cr                Language: wraps a TSLanguage pointer (ABI check MIN_ABI..MAX_ABI), directories/find for .so lookup, Language.load (autodetect or dlopen + dlsym, never closed)
   tree.cr                    Tree: root, edit, changed_regions (ts_tree_get_changed_ranges, freed with LibC.free), copy; ts_tree_delete in finalize
   node.cr                    Node: value over LibTreeSitter::Node + its Tree (region for included regions); navigation returns nil for null nodes
   parser.cr                  Parser: parse(string), parse { |byte| bytes } through a TSInput read callback (Reader boxed as payload), parse(old, cancel:) through ts_parser_parse_with_options (reset after a cancel), included_regions=
@@ -23,7 +23,7 @@ src/tree_sitter/
 fixtures/json/               tree-sitter-json parser.c + tree_sitter/*.h (ABI 14, MIT, LICENSE kept), only for specs
 spec/
   spec_helper.cr             JSON_GRAMMAR from the fixture; types(node) helper
-  tree_sitter_spec.cr        Language, Parser (string, reader, incremental, changed regions, included regions, cancel, errors, descendants), Query (captures, ranges, predicates, properties, errors, Lua)
+  tree_sitter_spec.cr        Language (load, directory lookup, ABI, errors), Parser (string, reader, incremental, changed regions, included regions, cancel, errors, descendants), Query (captures, ranges, predicates, properties, errors, Lua)
 ```
 
 ## Commands
@@ -39,6 +39,7 @@ crystal spec spec/tree_sitter_spec.cr:42
 ## Architecture notes
 
 - **Binding surface.** `lib.cr` declares only the functions the wrappers call. A new wrapper adds its function there, with the exact C layout from `tree_sitter/api.h` of 0.25: `TSInput` has the `decode` field and `ts_language_abi_version` exists only from 0.25, which is why older libraries are not supported.
+- **Grammar lookup.** `Language.directories` is an ordered, configurable array of non-recursive search paths. `Language.find` checks `libtree-sitter-<name>.so` then `<name>.so` in each directory; `Language.load(name)` uses the first match.
 - **Lifetimes.**
   - `Tree`, `Parser` and `Query` own their C objects and free them in `finalize`.
   - `Node` holds its `Tree`, so a node never outlives the tree's memory.
