@@ -2,8 +2,6 @@
 
 Crystal bindings to the [Tree-sitter](https://tree-sitter.github.io) C library: grammars loaded from shared libraries at run time, incremental parsing from a string or a chunked reader, syntax nodes, and queries with the common predicates.
 
-It binds the library and nothing more: no grammars are built in, and it knows nothing about editors. [asekii-editor](https://github.com/shpeckman/asekii-editor) builds highlighting and AST editing for [scribe](https://github.com/shpeckman/scribe) documents on it.
-
 ## Requirements
 
 - Crystal 1.21 or newer
@@ -50,10 +48,10 @@ json = TreeSitter::Language.load("json")
 
 ### Parsing
 
-| Call | Parses |
-| --- | --- |
-| `parse(text, old_tree = nil)` | A string |
-| `parse(old_tree = nil) { \|byte\| bytes }` | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end |
+| Call                                                                 | Parses                                                                                                                                                                |
+|----------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `parse(text, old_tree = nil)`                                        | A string                                                                                                                                                              |
+| `parse(old_tree = nil) { \|byte\| bytes }`                           | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end                                      |
 | `parse(old_tree, cancel: ->(byte : Int32) { … }) { \|byte\| bytes }` | Chunks as above, asking `cancel` with the byte reached as it goes; returns `nil` once it answers `true` (a time budget, a newer edit), and the next parse starts over |
 
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises `Error` when the parse does not finish.
@@ -86,14 +84,14 @@ Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte colu
 
 `Node` is a value tied to its `Tree`, and it keeps the tree alive. Every navigation method returns `nil` where there is no node.
 
-| Group | Methods |
-| --- | --- |
-| Identity | `type`, `named?`, `extra?`, `==` |
-| Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point` |
-| Errors | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside) |
-| Tree | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)` |
-| Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling` |
-| Search | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range |
+| Group    | Methods                                                                                                     |
+|----------|-------------------------------------------------------------------------------------------------------------|
+| Identity | `type`, `named?`, `extra?`, `==`                                                                            |
+| Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point`                                               |
+| Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside) |
+| Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                   |
+| Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                          |
+| Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range               |
 
 ### Queries
 
@@ -121,12 +119,12 @@ A query the grammar rejects raises `QueryError`, which carries its `kind` (`Synt
 
 ### Predicates
 
-| Predicate | Passes when the capture's text |
-| --- | --- |
-| `#eq? @a "x"`, `#eq? @a @b` | Equals the string, or the other capture's text |
-| `#match? @a "re"` (also `#vim-match?`) | Matches the regular expression (PCRE) |
-| `#lua-match? @a "%u%w*"` | Matches the Lua pattern, translated to a regular expression |
-| `#any-of? @a "x" "y"` | Is one of the strings |
+| Predicate                              | Passes when the capture's text                              |
+|----------------------------------------|-------------------------------------------------------------|
+| `#eq? @a "x"`, `#eq? @a @b`            | Equals the string, or the other capture's text              |
+| `#match? @a "re"` (also `#vim-match?`) | Matches the regular expression (PCRE)                       |
+| `#lua-match? @a "%u%w*"`               | Matches the Lua pattern, translated to a regular expression |
+| `#any-of? @a "x" "y"`                  | Is one of the strings                                       |
 
 Each predicate has a `not-` form (`#not-eq?`, …). A capture missing from the match passes. Directives (`#set!`, `#make-range!`), unknown predicates and a `#match?` whose expression does not compile are skipped, so the match is reported as if they were absent.
 
