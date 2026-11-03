@@ -1,11 +1,45 @@
 # spec/tree_sitter_spec.cr
 
 require "./spec_helper"
+require "file_utils"
 
 describe TreeSitter::Language do
   it "loads a grammar and reports its ABI" do
     JSON_GRAMMAR.name.should eq("json")
     JSON_GRAMMAR.abi_version.should eq(14)
+  end
+
+  it "finds and loads grammars from configured directories" do
+    root        = File.join(Dir.tempdir, "treesitter-language-spec-#{Process.pid}")
+    first       = File.join(root, "first")
+    second      = File.join(root, "second")
+    system_path = File.join(first, "libtree-sitter-json.so")
+    short_path  = File.join(second, "json.so")
+    previous    = TreeSitter::Language.directories
+    begin
+      Dir.mkdir_p(first)
+      Dir.mkdir_p(second)
+      TreeSitter::Language.directories = [first, second]
+      TreeSitter::Language.find("json").should be_nil
+      FileUtils.cp(TreeSitter::Fixture.library("json"), system_path)
+      FileUtils.cp(TreeSitter::Fixture.library("json"), short_path)
+      TreeSitter::Language.find("json").should eq(system_path)
+      File.delete(system_path)
+      TreeSitter::Language.find("json").should eq(short_path)
+      language = TreeSitter::Language.load("json")
+      TreeSitter::Parser.new(language).parse("null").root.named_child(0).not_nil!.type.should eq("null")
+      TreeSitter::Language.find("missing").should be_nil
+      error = expect_raises(TreeSitter::Error, /cannot find grammar missing/) { TreeSitter::Language.load("missing") }
+      error.message.not_nil!.should contain(first)
+      error.message.not_nil!.should contain(second)
+    ensure
+      TreeSitter::Language.directories = previous
+      File.delete(system_path) if File.exists?(system_path)
+      File.delete(short_path) if File.exists?(short_path)
+      Dir.delete(first) if Dir.exists?(first)
+      Dir.delete(second) if Dir.exists?(second)
+      Dir.delete(root) if Dir.exists?(root)
+    end
   end
 
   it "raises for a missing library" do

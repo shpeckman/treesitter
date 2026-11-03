@@ -12,6 +12,34 @@ module TreeSitter
     # The name given when loading, if any.
     getter name : String?
 
+    # Directories searched by `Language.find`, in order. Defaults to the per-user and system library directories;
+    # replace or reorder the array to configure lookup.
+    class_property directories : Array(String) = [
+      File.join(Path.home.to_s, ".local", "lib"),
+      "/usr/local/lib",
+      "/usr/local/lib64",
+      "/usr/lib",
+      "/usr/lib64",
+    ]
+
+    # Finds the shared library for grammar *name* in `directories`, looking for `libtree-sitter-<name>.so` and
+    # `<name>.so` in each directory; returns its path, or `nil` when no library exists.
+    def self.find(name : String) : String?
+      directories.each do |directory|
+        {"libtree-sitter-#{name}.so", "#{name}.so"}.each do |filename|
+          path = File.join(directory, filename)
+          return path if File.file?(path)
+        end
+      end
+      nil
+    end
+
+    # Finds and loads grammar *name* from `directories`; raises `Error` when no matching shared library exists.
+    def self.load(name : String) : Language
+      path = find(name) || raise Error.new("cannot find grammar #{name}; searched: #{directories.join(", ")}")
+      load(path, name)
+    end
+
     # Wraps *pointer*, the result of a grammar's `tree_sitter_<name>()`; raises `Error` for a null pointer or an
     # unsupported ABI version.
     def initialize(@pointer : Void*, @name : String? = nil)
