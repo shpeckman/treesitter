@@ -230,6 +230,74 @@ Each predicate has a \fB\%not\-\fR form (\fB\%#not\-eq?\fR, \[u2026]). A capture
 one): \fB\%(#set! \%injection.language \%"lua")\fR gives \fB\%{"injection.language" \%=> \%"lua"}\fR. Read it with \fB\%match.pattern\fR or
 \fB\%capture.pattern\fR.
 .SH
+LANGUAGE DETECTION
+.PP
+\fB\%require \%"treesitter/detect"\fR (not loaded by \fB\%require \%"treesitter"\fR) adds \fB\%TreeSitter::Detector\fR. It guesses the language of text that has no file name, such as a pasted snippet. It works in two steps:
+.IP 1. 3
+An rlcd <https://github.com/shpeckman/rlcd> model, trained with a proper scoring rule, ranks the languages with calibrated probabilities. It hashes words, symbol runs and character 2\[u2013]5\-grams of the text.
+.IP 2. 3
+The \fB\%checked\fR most probable languages are parsed with their grammars (\fB\%Language.find\fR). Each one\(aqs probability is multiplied by \fB\%exp(\-penalty \%* \%error_ratio)\fR, where \fB\%error_ratio\fR is the share of the text that falls in \fB\%ERROR\fR nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar is not reweighted.
+.PP
+Labels are grammar names, so the detected name goes straight to \fB\%Language.load\fR.
+.PP
+.RS 4
+.EX
+require "treesitter/detect"
+
+detector = TreeSitter::Detector.train({
+  "json"   => json_snippets,
+  "python" => python_snippets,
+  "ruby"   => ruby_snippets,
+}, epochs: 30)
+detector.save("languages.rlcd", precision: RLCD::Precision::I8)
+
+detector  = TreeSitter::Detector.load("languages.rlcd")
+detection = detector.detect("def greet(name):\en    print(name)\en")
+detection.language                 # => "python", or nil below the threshold
+detection.probability              # => 0.97
+detection.candidates               # => [Candidate("python", 0.97, 0.0), Candidate("ruby", 0.02, 0.4), ...]
+detection.language.try { |name| TreeSitter::Language.load(name) }
+.EE
+.RE
+.PP
+.TS
+tab(	);
+l l lx.
+T{
+\fBSetting\fR
+T}	T{
+\fBDefault\fR
+T}	T{
+\fBMeaning\fR
+T}
+_
+T{
+\fB\%checked\fR
+T}	T{
+3
+T}	T{
+How many of the most probable languages get the parse check; 0 keeps the model\(aqs probabilities
+T}
+T{
+\fB\%penalty\fR
+T}	T{
+1.0
+T}	T{
+How strongly parse errors count
+T}
+T{
+\fB\%threshold\fR
+T}	T{
+0.5
+T}	T{
+Probability \fB\%Detection#language\fR needs; \fB\%detect(text, \%threshold:)\fR overrides it per call
+T}
+.TE
+.PP
+\fB\%Detector.train(samples, \%dim: \%4096, \%seed: \%42, \%hidden: \%0, \%epochs: \%60, \%lr: \%0.01, \%validation: \%0.15, \%rng:)\fR takes grammar name \[u2192] snippets, for at least two languages. It trains a linear head (or a \fB\%hidden\fR layer) with the log score. A temperature fitted on the \fB\%validation\fR share of each language\(aqs snippets calibrates the result. \fB\%save\fR writes JSON for a \fB\%.json\fR path and the compact rlcd binary otherwise, with \fB\%precision\fR \fB\%F64\fR, \fB\%F32\fR or \fB\%I8\fR. \fB\%Detector.load\fR detects the format and raises \fB\%RLCD::FormatError\fR for a malformed file. \fB\%detector.model\fR is the \fB\%RLCD::Model\fR, and it carries the optimizer state, so training can resume with \fB\%RLCD::Trainer\fR. A detector reuses one parser, so give each fiber its own.
+.PP
+Measured on this machine: 1500 chunks of 25 lines per language for C, JavaScript, JSON, Python, Ruby and Rust, with 8\-line chunks of other files held out. Detection was 96.0% accurate with ECE 0.020 without the parse check (0.5 ms per snippet), and 96.1% with ECE 0.017 with it (1.3 ms). The I8 model, optimizer state included, is 221 KB.
+.SH
 SPEC FIXTURE
 .PP
 \fB\%require \%"treesitter/fixture"\fR (not loaded by \fB\%require \%"treesitter"\fR) adds \fB\%TreeSitter::Fixture\fR. It compiles the bundled JSON grammar (\fB\%fixtures/json\fR, MIT, from tree\-sitter\-json) with \fB\%cc\fR into a temporary directory on first use:
@@ -263,6 +331,15 @@ Bindings to the Tree\-sitter C library (0.25 or newer, linked through \fB\%pkg\-
 .TP
 .BR "TreeSitter::Capture" (3cr)
 One captured node of a query match: the node, its capture \fB\%id\fR and \fB\%name\fR (\fB\%"keyword"\fR, \fB\%"function.outer"\fR) and the index of the \fB\%pattern\fR that matched.
+.TP
+.BR "TreeSitter::Detector" (3cr)
+Guesses the language of source text that has no file name, such as a snippet.
+.TP
+.BR "TreeSitter::Detector::Candidate" (3cr)
+A language \fB\%Detector#detect\fR considered: its \fB\%probability\fR after the parse check, and \fB\%error_ratio\fR, the share of the text (0.0 to 1.0) its grammar could not parse, \fB\%nil\fR when the grammar was not checked.
+.TP
+.BR "TreeSitter::Detector::Detection" (3cr)
+The result of \fB\%Detector#detect\fR: one \fB\%Candidate\fR per label, most probable first.
 .TP
 .BR "TreeSitter::Edit" (3cr)
 One text replacement, given to \fB\%Tree#edit\fR before reparsing: where it starts, where the replaced text ended and where the new text ends, as bytes and as points.
