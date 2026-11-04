@@ -185,11 +185,11 @@ TreeSitter::Fixture.clean             # removes the compiled libraries
 
 ## Man pages
 
-`man/` holds man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and one section 3 page per type, such as `TreeSitter::Node(3cr)`. Read them from the installed shard:
+`man/` holds two gzipped man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and `treesitter(3cr)` for the API, with one section per type. Read them from the installed shard:
 
 ```sh
-man -M lib/treesitter/man TreeSitter::Parser
-man -l lib/treesitter/man/man3/TreeSitter::Parser.3cr
+man -M lib/treesitter/man 3cr treesitter
+man -l lib/treesitter/man/man7/treesitter.7cr.gz
 ```
 
 ## License
