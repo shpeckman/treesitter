@@ -133,10 +133,6 @@ Each predicate has a `not-` form (`#not-eq?`, …). A capture missing from the m
 one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`. Read it with `match.pattern` or
 `capture.pattern`.
 
-## Language detection
-
-The `lang_detect` shard guesses the language of text that has no file name, such as a pasted snippet. Its labels are grammar names, so a detected name goes straight to `Language.load`.
-
 ## Spec fixture
 
 `require "treesitter/fixture"` (not loaded by `require "treesitter"`) adds `TreeSitter::Fixture`. It compiles the bundled JSON grammar (`fixtures/json`, MIT, from tree-sitter-json) with `cc` into a temporary directory on first use:
