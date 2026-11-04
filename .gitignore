@@ -5,4 +5,3 @@
 /.shards/
 shard.lock
 *.dwarf
-/build/
