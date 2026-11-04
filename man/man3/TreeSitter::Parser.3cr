@@ -39,6 +39,10 @@ slice at the end). Each chunk must stay unchanged until the next call; the parse
 \fBdef parse(old_tree : Tree | Nil, *, cancel : Int32 \-> Bool, &read : Int32 \-> Bytes) : Tree | Nil\fR
 Parses like \fB\%parse(old_tree, \%&read)\fR, asking \fIcancel\fR with the byte reached as it goes; returns \fB\%nil\fR when
 \fIcancel\fR returned \fB\%true\fR, and the next parse starts over.
+.TP 4
+\fBdef parse(text : String, old_tree : Tree | Nil = nil, *, timeout : Time::Span) : Tree | Nil\fR
+Parses \fItext\fR like \fB\%parse(text, \%old_tree)\fR, but gives up once \fItimeout\fR has passed and returns \fB\%nil\fR, so a
+grammar whose error recovery explodes on some input cannot take unbounded time or memory.
 .SH "DEFINED IN"
 src/tree_sitter/parser.cr
 .SH "SEE ALSO"

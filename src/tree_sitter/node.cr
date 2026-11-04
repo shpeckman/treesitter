@@ -4,6 +4,9 @@ module TreeSitter
   # A node of a `Tree`: its type, byte range, points and neighbors. Navigation returns `nil` where there is no node.
   # A node is a value; it stays valid while its tree is not edited.
   struct Node
+    # Bytes of error that each node inserted by the parser (`missing?`) counts for in `error_bytes`.
+    MISSING_BYTES = 1
+
     # The tree this node belongs to.
     getter tree : Tree
 
@@ -71,6 +74,15 @@ module TreeSitter
     # Whether this node is or contains an error or a missing node.
     def has_error? : Bool
       LibTreeSitter.ts_node_has_error(@raw)
+    end
+
+    # How much of this node the parser could not fit: the bytes inside `ERROR` nodes plus `MISSING_BYTES` per missing
+    # node, 0 for a clean parse. Only subtrees that contain errors are visited.
+    def error_bytes : Int32
+      return end_byte - start_byte if error?
+      return MISSING_BYTES if missing?
+      return 0 unless has_error?
+      (0...child_count).sum { |index| child(index).try(&.error_bytes) || 0 }
     end
 
     # The enclosing node, `nil` for the root.

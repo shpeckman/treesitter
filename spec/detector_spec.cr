@@ -49,6 +49,7 @@ describe TreeSitter::Detector do
   it "checks candidates with their grammars and lowers those that do not parse" do
     with_fixture_grammars do
       detector = trained
+      detector.checked = 3
       clean    = detector.detect(%({"a": [1, 2]}))
       clean.candidates.find! { |candidate| candidate.language == "json" }.error_ratio.should eq(0.0)
       clean.candidates.find! { |candidate| candidate.language == "ruby" }.error_ratio.should be_nil
@@ -61,10 +62,20 @@ describe TreeSitter::Detector do
     end
   end
 
-  it "keeps the model's probabilities when nothing is checked" do
+  it "does not reweight a candidate whose parse runs out of time" do
     with_fixture_grammars do
       detector = trained
-      detector.checked = 0
+      detector.checked = 3
+      detector.timeout = 0.seconds
+      long = "[" + (["1"] * 200_000).join(", ") + "]"
+      detector.detect(long).candidates.find! { |candidate| candidate.language == "json" }.error_ratio.should be_nil
+    end
+  end
+
+  it "keeps the model's probabilities by default, when nothing is checked" do
+    with_fixture_grammars do
+      detector = trained
+      detector.checked.should eq(0)
       text = %({"a": [1, 2 ;; puts x)
       detector.detect(text).candidates.map { |candidate| {candidate.language, candidate.probability} }.should eq(detector.model.predict(text))
       detector.detect(text).candidates.all?(&.error_ratio.nil?).should be_true
@@ -94,6 +105,45 @@ describe TreeSitter::Detector do
         loaded.model.optimizer.should_not be_nil
       end
     end
+  end
+
+  it "fits the temperature on a separate calibration set" do
+    calibration = SAMPLES.transform_values(&.first(5))
+    detector    = TreeSitter::Detector.train(SAMPLES.transform_values(&.[5..]), dim: 256, epochs: 5, calibration: calibration, rng: Random.new(3))
+    detector.model.temperature.should be > 0.0
+    detector.detect(%({"a": [1]})).language.should eq("json")
+    expect_raises(ArgumentError, /calibration language lua/) do
+      TreeSitter::Detector.train(SAMPLES, dim: 64, epochs: 1, calibration: {"lua" => ["x = 1"]})
+    end
+  end
+
+  it "measures the share of the text a parse could not fit" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    TreeSitter::Detector.error_ratio(parser.parse("[1]").root, "[1]").should eq(0.0)
+    text = "[1, @@@@@@ 2]"
+    TreeSitter::Detector.error_ratio(parser.parse(text).root, text).should be > 0.3
+    TreeSitter::Detector.error_ratio(parser.parse("@@@@").root, "@@@@").should eq(1.0)
+  end
+
+  it "resumes from a checkpoint to the weights of an uninterrupted run" do
+    path = File.tempname("treesitter-detector-checkpoint", ".rlcd")
+    TreeSitter::Detector.train(SAMPLES, dim: 256, epochs: 3, checkpoint: path, rng: Random.new(1))
+    RLCD::Model.load(path).checkpoint.should eq(RLCD::Checkpoint.new(3, 3, 42_u64))
+    resumed  = TreeSitter::Detector.train(SAMPLES, dim: 256, epochs: 6, checkpoint: path, rng: Random.new(1))
+    straight = TreeSitter::Detector.train(SAMPLES, dim: 256, epochs: 6, rng: Random.new(1))
+    RLCD::Model.load(path).checkpoint.not_nil!.epoch.should eq(6)
+    resumed.model.policy.param_slices.map(&.to_a).should eq(straight.model.policy.param_slices.map(&.to_a))
+    resumed.model.temperature.should eq(straight.model.temperature)
+    expect_raises(ArgumentError, /at epoch 6, past the requested 4/) do
+      TreeSitter::Detector.train(SAMPLES, dim: 256, epochs: 4, checkpoint: path, rng: Random.new(1))
+    end
+    expect_raises(ArgumentError, /belongs to another run: labels differ/) do
+      TreeSitter::Detector.train(SAMPLES.reject("python"), dim: 256, epochs: 6, checkpoint: path)
+    end
+    expect_raises(ArgumentError, /featurizer differs/) do
+      TreeSitter::Detector.train(SAMPLES, dim: 256, epochs: 6, seed: 7_u64, checkpoint: path)
+    end
+    File.delete(path)
   end
 
   it "rejects unusable training samples" do

@@ -45,6 +45,16 @@ module TreeSitter
       nil
     end
 
+    # Parses *text* like `parse(text, old_tree)`, but gives up once *timeout* has passed and returns `nil`, so a
+    # grammar whose error recovery explodes on some input cannot take unbounded time or memory.
+    def parse(text : String, old_tree : Tree? = nil, *, timeout : Time::Span) : Tree?
+      started = Time.instant
+      bytes   = text.to_slice
+      parse(old_tree, cancel: ->(_byte : Int32) { Time.instant - started > timeout }) do |byte|
+        byte < bytes.size ? bytes[byte..] : Bytes.empty
+      end
+    end
+
     # Limits the following parses to *regions*, in text order and not overlapping, as for a language embedded in
     # another one's text; an empty array parses everything again. Raises `Error` when the library rejects them.
     def included_regions=(regions : Array(Region)) : Array(Region)

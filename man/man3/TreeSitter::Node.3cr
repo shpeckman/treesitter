@@ -13,6 +13,10 @@ TreeSitter::Node \- A node of a \fB\%Tree\fR: its type, byte range, points and n
 .PP
 A node of a \fB\%Tree\fR: its type, byte range, points and neighbors. Navigation returns \fB\%nil\fR where there is no node.
 A node is a value; it stays valid while its tree is not edited.
+.SH "CONSTANTS"
+.TP 4
+\fBMISSING_BYTES = 1\fR
+Bytes of error that each node inserted by the parser (\fB\%missing?\fR) counts for in \fB\%error_bytes\fR.
 .SH "INSTANCE METHODS"
 .TP 4
 \fBdef ==(other : Node) : Bool\fR
@@ -35,6 +39,10 @@ Where the node ends.
 .TP 4
 \fBdef error? : Bool\fR
 Whether this node is an \fB\%ERROR\fR node, text the parser could not fit.
+.TP 4
+\fBdef error_bytes : Int32\fR
+How much of this node the parser could not fit: the bytes inside \fB\%ERROR\fR nodes plus \fB\%MISSING_BYTES\fR per missing
+node, 0 for a clean parse. Only subtrees that contain errors are visited.
 .TP 4
 \fBdef extra? : Bool\fR
 Whether this node is extra, such as a comment, which may appear anywhere.

@@ -53,6 +53,7 @@ json = TreeSitter::Language.load("json")
 | `parse(text, old_tree = nil)`                                        | A string                                                                                                                                                              |
 | `parse(old_tree = nil) { \|byte\| bytes }`                           | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end                                      |
 | `parse(old_tree, cancel: ->(byte : Int32) { … }) { \|byte\| bytes }` | Chunks as above, asking `cancel` with the byte reached as it goes; returns `nil` once it answers `true` (a time budget, a newer edit), and the next parse starts over |
+| `parse(text, old_tree = nil, timeout: 50.milliseconds)`              | A string within a time budget; returns `nil` once it runs out, so a grammar whose error recovery explodes on some input cannot take unbounded time or memory |
 
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises `Error` when the parse does not finish.
 
@@ -88,7 +89,7 @@ Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte colu
 |----------|-------------------------------------------------------------------------------------------------------------|
 | Identity | `type`, `named?`, `extra?`, `==`                                                                            |
 | Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point`                                               |
-| Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside) |
+| Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside), `error_bytes` (bytes in `ERROR` nodes plus one per missing node) |
 | Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                   |
 | Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                          |
 | Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range               |
@@ -134,10 +135,12 @@ one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`
 
 ## Language detection
 
-`require "treesitter/detect"` (not loaded by `require "treesitter"`) adds `TreeSitter::Detector`. It guesses the language of text that has no file name, such as a pasted snippet. It works in two steps:
+`require "treesitter/detect"` (not loaded by `require "treesitter"`) adds `TreeSitter::Detector`. It guesses the language of text that has no file name, such as a pasted snippet:
 
 1. An [rlcd](https://github.com/shpeckman/rlcd) model, trained with a proper scoring rule, ranks the languages with calibrated probabilities. It hashes words, symbol runs and character 2–5-grams of the text.
-2. The `checked` most probable languages are parsed with their grammars (`Language.find`). Each one's probability is multiplied by `exp(-penalty * error_ratio)`, where `error_ratio` is the share of the text that falls in `ERROR` nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar is not reweighted.
+2. Optionally, the parse check (opt-in, `checked` > 0): the `checked` most probable languages are parsed with their grammars (`Language.find`). Each one's probability is multiplied by `exp(-penalty * error_ratio)`, where `error_ratio` is the share of the text that falls in `ERROR` nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar, or whose parse runs past `timeout`, is not reweighted.
+
+The parse check is off by default. It gains little over the model (measurements below), costs about 2.5 times the time, depends on which grammars are installed, and runs each grammar's C code on the text. Some grammars misbehave on unexpected input: Julia's error recovery grew one parse past 3 GB, which `timeout` stops, and Perl's external scanner looped forever, which no in-process timeout can interrupt because tree-sitter only checks for cancellation between parser steps. Enable it only for grammars you trust, or run detection in a separate process you can kill.
 
 Labels are grammar names, so the detected name goes straight to `Language.load`.
 
@@ -155,17 +158,18 @@ detector  = TreeSitter::Detector.load("languages.rlcd")
 detection = detector.detect("def greet(name):\n    print(name)\n")
 detection.language                 # => "python", or nil below the threshold
 detection.probability              # => 0.97
-detection.candidates               # => [Candidate("python", 0.97, 0.0), Candidate("ruby", 0.02, 0.4), ...]
+detection.candidates               # => [Candidate("python", 0.97, nil), Candidate("ruby", 0.02, nil), ...]
 detection.language.try { |name| TreeSitter::Language.load(name) }
 ```
 
 | Setting                  | Default | Meaning                                                                                       |
 |--------------------------|---------|-----------------------------------------------------------------------------------------------|
-| `checked`                | 3       | How many of the most probable languages get the parse check; 0 keeps the model's probabilities |
+| `checked`                | 0       | How many of the most probable languages get the parse check; 0 keeps the model's probabilities |
 | `penalty`                | 1.0     | How strongly parse errors count                                                                |
 | `threshold`              | 0.5     | Probability `Detection#language` needs; `detect(text, threshold:)` overrides it per call      |
+| `timeout`                | 50 ms   | Time budget of one candidate's parse check; a candidate that runs out is not reweighted         |
 
-`Detector.train(samples, dim: 4096, seed: 42, hidden: 0, epochs: 60, lr: 0.01, validation: 0.15, rng:)` takes grammar name → snippets, for at least two languages. It trains a linear head (or a `hidden` layer) with the log score. A temperature fitted on the `validation` share of each language's snippets calibrates the result. `save` writes JSON for a `.json` path and the compact rlcd binary otherwise, with `precision` `F64`, `F32` or `I8`. `Detector.load` detects the format and raises `RLCD::FormatError` for a malformed file. `detector.model` is the `RLCD::Model`, and it carries the optimizer state, so training can resume with `RLCD::Trainer`. A detector reuses one parser, so give each fiber its own.
+`Detector.train(samples, dim: 4096, seed: 42, hidden: 0, epochs: 60, lr: 0.01, validation: 0.15, calibration: nil, checkpoint: nil, rng:)` takes grammar name → snippets, for at least two languages. It trains a linear head (or a `hidden` layer) with the log score. A temperature calibrates the result, fitted on `calibration:` (grammar name → snippets kept apart from the training samples) when given, otherwise on the `validation` share of each language's snippets. `Detector.error_ratio(root, text)` is the share of the text a parse could not fit, the measure the parse check uses. `seed` also fixes each epoch's shuffle order. With `checkpoint:` (a path), training saves its state there after every epoch, atomically; a later call that finds the file continues after its last completed epoch and reaches the weights of an uninterrupted run, and raises `ArgumentError` when the file belongs to another run (different labels, featurizer, hidden layer or seed) or is already past `epochs`. `save` writes JSON for a `.json` path and the compact rlcd binary otherwise, with `precision` `F64`, `F32` or `I8`. `Detector.load` detects the format and raises `RLCD::FormatError` for a malformed file. `detector.model` is the `RLCD::Model`, and it carries the optimizer state, so training can resume with `RLCD::Trainer`. A detector reuses one parser, so give each fiber its own.
 
 Measured on this machine: 1500 chunks of 25 lines per language for C, JavaScript, JSON, Python, Ruby and Rust, with 8-line chunks of other files held out. Detection was 96.0% accurate with ECE 0.020 without the parse check (0.5 ms per snippet), and 96.1% with ECE 0.017 with it (1.3 ms). The I8 model, optimizer state included, is 221 KB.
 

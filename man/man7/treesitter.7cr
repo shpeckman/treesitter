@@ -88,6 +88,11 @@ T{
 T}	T{
 Chunks as above, asking \fB\%cancel\fR with the byte reached as it goes; returns \fB\%nil\fR once it answers \fB\%true\fR (a time budget, a newer edit), and the next parse starts over
 T}
+T{
+\fB\%parse(text, \%old_tree \%= \%nil, \%timeout: \%50.milliseconds)\fR
+T}	T{
+A string within a time budget; returns \fB\%nil\fR once it runs out, so a grammar whose error recovery explodes on some input cannot take unbounded time or memory
+T}
 .TE
 .PP
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises \fB\%Error\fR when the parse does not finish.
@@ -146,7 +151,7 @@ T}
 T{
 Errors
 T}	T{
-\fB\%error?\fR (an \fB\%ERROR\fR node), \fB\%missing?\fR (inserted by recovery, zero width), \fB\%has_error?\fR (either one inside)
+\fB\%error?\fR (an \fB\%ERROR\fR node), \fB\%missing?\fR (inserted by recovery, zero width), \fB\%has_error?\fR (either one inside), \fB\%error_bytes\fR (bytes in \fB\%ERROR\fR nodes plus one per missing node)
 T}
 T{
 Tree
@@ -232,11 +237,13 @@ one): \fB\%(#set! \%injection.language \%"lua")\fR gives \fB\%{"injection.langua
 .SH
 LANGUAGE DETECTION
 .PP
-\fB\%require \%"treesitter/detect"\fR (not loaded by \fB\%require \%"treesitter"\fR) adds \fB\%TreeSitter::Detector\fR. It guesses the language of text that has no file name, such as a pasted snippet. It works in two steps:
+\fB\%require \%"treesitter/detect"\fR (not loaded by \fB\%require \%"treesitter"\fR) adds \fB\%TreeSitter::Detector\fR. It guesses the language of text that has no file name, such as a pasted snippet:
 .IP 1. 3
 An rlcd <https://github.com/shpeckman/rlcd> model, trained with a proper scoring rule, ranks the languages with calibrated probabilities. It hashes words, symbol runs and character 2\[u2013]5\-grams of the text.
 .IP 2. 3
-The \fB\%checked\fR most probable languages are parsed with their grammars (\fB\%Language.find\fR). Each one\(aqs probability is multiplied by \fB\%exp(\-penalty \%* \%error_ratio)\fR, where \fB\%error_ratio\fR is the share of the text that falls in \fB\%ERROR\fR nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar is not reweighted.
+Optionally, the parse check (opt\-in, \fB\%checked\fR > 0): the \fB\%checked\fR most probable languages are parsed with their grammars (\fB\%Language.find\fR). Each one\(aqs probability is multiplied by \fB\%exp(\-penalty \%* \%error_ratio)\fR, where \fB\%error_ratio\fR is the share of the text that falls in \fB\%ERROR\fR nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar, or whose parse runs past \fB\%timeout\fR, is not reweighted.
+.PP
+The parse check is off by default. It gains little over the model (measurements below), costs about 2.5 times the time, depends on which grammars are installed, and runs each grammar\(aqs C code on the text. Some grammars misbehave on unexpected input: Julia\(aqs error recovery grew one parse past 3 GB, which \fB\%timeout\fR stops, and Perl\(aqs external scanner looped forever, which no in\-process timeout can interrupt because tree\-sitter only checks for cancellation between parser steps. Enable it only for grammars you trust, or run detection in a separate process you can kill.
 .PP
 Labels are grammar names, so the detected name goes straight to \fB\%Language.load\fR.
 .PP
@@ -255,7 +262,7 @@ detector  = TreeSitter::Detector.load("languages.rlcd")
 detection = detector.detect("def greet(name):\en    print(name)\en")
 detection.language                 # => "python", or nil below the threshold
 detection.probability              # => 0.97
-detection.candidates               # => [Candidate("python", 0.97, 0.0), Candidate("ruby", 0.02, 0.4), ...]
+detection.candidates               # => [Candidate("python", 0.97, nil), Candidate("ruby", 0.02, nil), ...]
 detection.language.try { |name| TreeSitter::Language.load(name) }
 .EE
 .RE
@@ -274,7 +281,7 @@ _
 T{
 \fB\%checked\fR
 T}	T{
-3
+0
 T}	T{
 How many of the most probable languages get the parse check; 0 keeps the model\(aqs probabilities
 T}
@@ -292,9 +299,16 @@ T}	T{
 T}	T{
 Probability \fB\%Detection#language\fR needs; \fB\%detect(text, \%threshold:)\fR overrides it per call
 T}
+T{
+\fB\%timeout\fR
+T}	T{
+50 ms
+T}	T{
+Time budget of one candidate\(aqs parse check; a candidate that runs out is not reweighted
+T}
 .TE
 .PP
-\fB\%Detector.train(samples, \%dim: \%4096, \%seed: \%42, \%hidden: \%0, \%epochs: \%60, \%lr: \%0.01, \%validation: \%0.15, \%rng:)\fR takes grammar name \[u2192] snippets, for at least two languages. It trains a linear head (or a \fB\%hidden\fR layer) with the log score. A temperature fitted on the \fB\%validation\fR share of each language\(aqs snippets calibrates the result. \fB\%save\fR writes JSON for a \fB\%.json\fR path and the compact rlcd binary otherwise, with \fB\%precision\fR \fB\%F64\fR, \fB\%F32\fR or \fB\%I8\fR. \fB\%Detector.load\fR detects the format and raises \fB\%RLCD::FormatError\fR for a malformed file. \fB\%detector.model\fR is the \fB\%RLCD::Model\fR, and it carries the optimizer state, so training can resume with \fB\%RLCD::Trainer\fR. A detector reuses one parser, so give each fiber its own.
+\fB\%Detector.train(samples, \%dim: \%4096, \%seed: \%42, \%hidden: \%0, \%epochs: \%60, \%lr: \%0.01, \%validation: \%0.15, \%calibration: \%nil, \%checkpoint: \%nil, \%rng:)\fR takes grammar name \[u2192] snippets, for at least two languages. It trains a linear head (or a \fB\%hidden\fR layer) with the log score. A temperature calibrates the result, fitted on \fB\%calibration:\fR (grammar name \[u2192] snippets kept apart from the training samples) when given, otherwise on the \fB\%validation\fR share of each language\(aqs snippets. \fB\%Detector.error_ratio(root, \%text)\fR is the share of the text a parse could not fit, the measure the parse check uses. \fB\%seed\fR also fixes each epoch\(aqs shuffle order. With \fB\%checkpoint:\fR (a path), training saves its state there after every epoch, atomically; a later call that finds the file continues after its last completed epoch and reaches the weights of an uninterrupted run, and raises \fB\%ArgumentError\fR when the file belongs to another run (different labels, featurizer, hidden layer or seed) or is already past \fB\%epochs\fR. \fB\%save\fR writes JSON for a \fB\%.json\fR path and the compact rlcd binary otherwise, with \fB\%precision\fR \fB\%F64\fR, \fB\%F32\fR or \fB\%I8\fR. \fB\%Detector.load\fR detects the format and raises \fB\%RLCD::FormatError\fR for a malformed file. \fB\%detector.model\fR is the \fB\%RLCD::Model\fR, and it carries the optimizer state, so training can resume with \fB\%RLCD::Trainer\fR. A detector reuses one parser, so give each fiber its own.
 .PP
 Measured on this machine: 1500 chunks of 25 lines per language for C, JavaScript, JSON, Python, Ruby and Rust, with 8\-line chunks of other files held out. Detection was 96.0% accurate with ECE 0.020 without the parse check (0.5 ms per snippet), and 96.1% with ECE 0.017 with it (1.3 ms). The I8 model, optimizer state included, is 221 KB.
 .SH
