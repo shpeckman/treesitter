@@ -15,8 +15,3 @@ libraries:
   tree-sitter: ">= 0.25.0"
 
 license: MIT
-
-dependencies:
-  rlcd:
-    github: shpeckman/rlcd
-    branch: main

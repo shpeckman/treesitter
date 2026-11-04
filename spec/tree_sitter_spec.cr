@@ -98,6 +98,23 @@ describe TreeSitter::Parser do
     array.child(array.child_count - 1).not_nil!.missing?.should be_true
   end
 
+  it "gives up a parse that runs past its timeout and parses normally afterwards" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    long   = "[" + (["1"] * 200_000).join(", ") + "]"
+    parser.parse(long, timeout: 0.seconds).should be_nil
+    tree = parser.parse("[1, 2]", timeout: 1.second).not_nil!
+    types(tree.root).should eq(%w(document array number number))
+  end
+
+  it "measures the bytes a parse could not fit" do
+    parser = TreeSitter::Parser.new(JSON_GRAMMAR)
+    parser.parse("[1, 2]").root.error_bytes.should eq(0)
+    parser.parse("[1, 2").root.error_bytes.should eq(TreeSitter::Node::MISSING_BYTES)
+    broken = parser.parse("[1, @@@ 2]").root
+    broken.error_bytes.should be >= 3
+    broken.error_bytes.should be < "[1, @@@ 2]".bytesize
+  end
+
   it "reports the regions whose syntax changed" do
     parser = TreeSitter::Parser.new(JSON_GRAMMAR)
     tree = parser.parse("[1, 2]")

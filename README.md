@@ -53,6 +53,7 @@ json = TreeSitter::Language.load("json")
 | `parse(text, old_tree = nil)`                                        | A string                                                                                                                                                              |
 | `parse(old_tree = nil) { \|byte\| bytes }`                           | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end                                      |
 | `parse(old_tree, cancel: ->(byte : Int32) { … }) { \|byte\| bytes }` | Chunks as above, asking `cancel` with the byte reached as it goes; returns `nil` once it answers `true` (a time budget, a newer edit), and the next parse starts over |
+| `parse(text, old_tree = nil, timeout: 50.milliseconds)`              | A string within a time budget; returns `nil` once it runs out, so a grammar whose error recovery explodes on some input cannot take unbounded time or memory |
 
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises `Error` when the parse does not finish.
 
@@ -88,7 +89,7 @@ Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte colu
 |----------|-------------------------------------------------------------------------------------------------------------|
 | Identity | `type`, `named?`, `extra?`, `==`                                                                            |
 | Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point`                                               |
-| Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside) |
+| Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside), `error_bytes` (bytes in `ERROR` nodes plus one per missing node) |
 | Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                   |
 | Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                          |
 | Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range               |
@@ -134,40 +135,7 @@ one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`
 
 ## Language detection
 
-`require "treesitter/detect"` (not loaded by `require "treesitter"`) adds `TreeSitter::Detector`. It guesses the language of text that has no file name, such as a pasted snippet. It works in two steps:
-
-1. An [rlcd](https://github.com/shpeckman/rlcd) model, trained with a proper scoring rule, ranks the languages with calibrated probabilities. It hashes words, symbol runs and character 2–5-grams of the text.
-2. The `checked` most probable languages are parsed with their grammars (`Language.find`). Each one's probability is multiplied by `exp(-penalty * error_ratio)`, where `error_ratio` is the share of the text that falls in `ERROR` nodes, with one byte counted per missing node. The checked candidates then share out their original total again. A language without a loadable grammar is not reweighted.
-
-Labels are grammar names, so the detected name goes straight to `Language.load`.
-
-```crystal
-require "treesitter/detect"
-
-detector = TreeSitter::Detector.train({
-  "json"   => json_snippets,
-  "python" => python_snippets,
-  "ruby"   => ruby_snippets,
-}, epochs: 30)
-detector.save("languages.rlcd", precision: RLCD::Precision::I8)
-
-detector  = TreeSitter::Detector.load("languages.rlcd")
-detection = detector.detect("def greet(name):\n    print(name)\n")
-detection.language                 # => "python", or nil below the threshold
-detection.probability              # => 0.97
-detection.candidates               # => [Candidate("python", 0.97, 0.0), Candidate("ruby", 0.02, 0.4), ...]
-detection.language.try { |name| TreeSitter::Language.load(name) }
-```
-
-| Setting                  | Default | Meaning                                                                                       |
-|--------------------------|---------|-----------------------------------------------------------------------------------------------|
-| `checked`                | 3       | How many of the most probable languages get the parse check; 0 keeps the model's probabilities |
-| `penalty`                | 1.0     | How strongly parse errors count                                                                |
-| `threshold`              | 0.5     | Probability `Detection#language` needs; `detect(text, threshold:)` overrides it per call      |
-
-`Detector.train(samples, dim: 4096, seed: 42, hidden: 0, epochs: 60, lr: 0.01, validation: 0.15, rng:)` takes grammar name → snippets, for at least two languages. It trains a linear head (or a `hidden` layer) with the log score. A temperature fitted on the `validation` share of each language's snippets calibrates the result. `save` writes JSON for a `.json` path and the compact rlcd binary otherwise, with `precision` `F64`, `F32` or `I8`. `Detector.load` detects the format and raises `RLCD::FormatError` for a malformed file. `detector.model` is the `RLCD::Model`, and it carries the optimizer state, so training can resume with `RLCD::Trainer`. A detector reuses one parser, so give each fiber its own.
-
-Measured on this machine: 1500 chunks of 25 lines per language for C, JavaScript, JSON, Python, Ruby and Rust, with 8-line chunks of other files held out. Detection was 96.0% accurate with ECE 0.020 without the parse check (0.5 ms per snippet), and 96.1% with ECE 0.017 with it (1.3 ms). The I8 model, optimizer state included, is 221 KB.
+The `lang_detect` shard guesses the language of text that has no file name, such as a pasted snippet. Its labels are grammar names, so a detected name goes straight to `Language.load`.
 
 ## Spec fixture
 
@@ -181,11 +149,11 @@ TreeSitter::Fixture.clean             # removes the compiled libraries
 
 ## Man pages
 
-`man/` holds man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and one section 3 page per type, such as `TreeSitter::Node(3cr)`. Read them from the installed shard:
+`man/` holds two gzipped man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and `treesitter(3cr)` for the API, with one section per type. Read them from the installed shard:
 
 ```sh
-man -M lib/treesitter/man TreeSitter::Parser
-man -l lib/treesitter/man/man3/TreeSitter::Parser.3cr
+man -M lib/treesitter/man 3cr treesitter
+man -l lib/treesitter/man/man7/treesitter.7cr.gz
 ```
 
 ## License
