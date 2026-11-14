@@ -53,7 +53,7 @@ json = TreeSitter::Language.load("json")
 | `parse(text, old_tree = nil)`                                        | A string                                                                                                                                                              |
 | `parse(old_tree = nil) { \|byte\| bytes }`                           | Text read in chunks: the block gets a byte offset and returns the bytes from there, of any length, and an empty slice at the end                                      |
 | `parse(old_tree, cancel: ->(byte : Int32) { … }) { \|byte\| bytes }` | Chunks as above, asking `cancel` with the byte reached as it goes; returns `nil` once it answers `true` (a time budget, a newer edit), and the next parse starts over |
-| `parse(text, old_tree = nil, timeout: 50.milliseconds)`              | A string within a time budget; returns `nil` once it runs out, so a grammar whose error recovery explodes on some input cannot take unbounded time or memory |
+| `parse(text, old_tree = nil, timeout: 50.milliseconds)`              | A string within a time budget; returns `nil` once it runs out, so a grammar whose error recovery explodes on some input cannot take unbounded time or memory          |
 
 A chunk must stay unchanged until the next call; the parser keeps the last one alive. Raises `Error` when the parse does not finish.
 
@@ -85,15 +85,15 @@ Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte colu
 
 `Node` is a value tied to its `Tree`, and it keeps the tree alive. Every navigation method returns `nil` where there is no node.
 
-| Group    | Methods                                                                                                     |
-|----------|-------------------------------------------------------------------------------------------------------------|
-| Identity | `type`, `named?`, `extra?`, `==`                                                                            |
-| Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point`                                               |
+| Group    | Methods                                                                                                                                                                       |
+|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Identity | `type`, `named?`, `extra?`, `==`                                                                                                                                              |
+| Position | `start_byte`, `end_byte`, `range`, `start_point`, `end_point`                                                                                                                 |
 | Errors   | `error?` (an `ERROR` node), `missing?` (inserted by recovery, zero width), `has_error?` (either one inside), `error_bytes` (bytes in `ERROR` nodes plus one per missing node) |
-| Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                   |
-| Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                          |
-| Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range               |
-| Walk     | `each_child`, `each_named_child`, `each_descendant`: the node and everything below it, each before its children |
+| Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                                                                                     |
+| Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                                                                                            |
+| Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range                                                                                 |
+| Walk     | `each_child`, `each_named_child`, `each_descendant`: the node and everything below it, each before its children                                                               |
 
 ### Queries
 
@@ -142,15 +142,6 @@ one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`
 json = TreeSitter::Fixture.language("json")
 TreeSitter::Fixture.library("json")   # path of the compiled .so
 TreeSitter::Fixture.clean             # removes the compiled libraries
-```
-
-## Man pages
-
-`man/` holds two gzipped man pages generated from this README and the API doc comments: `treesitter(7cr)` for the overview and `treesitter(3cr)` for the API, with one section per type. Read them from the installed shard:
-
-```sh
-man -M lib/treesitter/man 3cr treesitter
-man -l lib/treesitter/man/man7/treesitter.7cr.gz
 ```
 
 ## License
