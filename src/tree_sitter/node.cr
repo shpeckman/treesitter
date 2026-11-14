@@ -82,7 +82,9 @@ module TreeSitter
       return end_byte - start_byte if error?
       return MISSING_BYTES if missing?
       return 0 unless has_error?
-      (0...child_count).sum { |index| child(index).try(&.error_bytes) || 0 }
+      total = 0
+      each_child { |child| total += child.error_bytes }
+      total
     end
 
     # The enclosing node, `nil` for the root.
@@ -110,6 +112,36 @@ module TreeSitter
     def named_child(index : Int32) : Node?
       return nil unless 0 <= index < named_child_count
       wrap(LibTreeSitter.ts_node_named_child(@raw, index.to_u32))
+    end
+
+    # Yields each child in order, anonymous ones included.
+    def each_child(& : Node ->) : Nil
+      with_cursor do |cursor|
+        return unless LibTreeSitter.ts_tree_cursor_goto_first_child(cursor)
+        loop do
+          yield node_at(cursor)
+          return unless LibTreeSitter.ts_tree_cursor_goto_next_sibling(cursor)
+        end
+      end
+    end
+
+    # Yields each named child in order.
+    def each_named_child(& : Node ->) : Nil
+      each_child { |child| yield child if child.named? }
+    end
+
+    # Yields this node and every node below it, anonymous ones included, in document order: each node before its
+    # children.
+    def each_descendant(& : Node ->) : Nil
+      with_cursor do |cursor|
+        loop do
+          yield node_at(cursor)
+          next if LibTreeSitter.ts_tree_cursor_goto_first_child(cursor)
+          until LibTreeSitter.ts_tree_cursor_goto_next_sibling(cursor)
+            return unless LibTreeSitter.ts_tree_cursor_goto_parent(cursor)
+          end
+        end
+      end
     end
 
     # The child in the grammar field *name* (`"key"`, `"body"`).
@@ -159,6 +191,23 @@ module TreeSitter
 
     private def wrap(raw : LibTreeSitter::Node) : Node?
       LibTreeSitter.ts_node_is_null(raw) ? nil : Node.new(raw, @tree)
+    end
+
+    # A walk runs on a tree cursor rather than `child`/`next_sibling`: `ts_node_child` scans from the first child and
+    # `ts_node_next_sibling` searches down from the root, while a cursor step is amortized O(1). The cursor is rooted
+    # at this node, so the walk never leaves it, and is freed however the block exits.
+    private def with_cursor(& : LibTreeSitter::TreeCursor* ->)
+      cursor = LibTreeSitter.ts_tree_cursor_new(@raw)
+      begin
+        yield pointerof(cursor)
+      ensure
+        LibTreeSitter.ts_tree_cursor_delete(pointerof(cursor))
+      end
+    end
+
+    @[AlwaysInline]
+    private def node_at(cursor : LibTreeSitter::TreeCursor*) : Node
+      Node.new(LibTreeSitter.ts_tree_cursor_current_node(cursor), @tree)
     end
   end
 end

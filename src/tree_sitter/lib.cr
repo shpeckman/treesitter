@@ -23,6 +23,12 @@ lib LibTreeSitter
     tree    : Void*
   end
 
+  struct TreeCursor
+    tree    : Void*
+    id      : Void*
+    context : StaticArray(UInt32, 3)
+  end
+
   struct Range
     start_point : Point
     end_point   : Point
@@ -131,6 +137,13 @@ lib LibTreeSitter
   fun ts_node_descendant_for_byte_range(node : Node, start : UInt32, stop : UInt32) : Node
   fun ts_node_named_descendant_for_byte_range(node : Node, start : UInt32, stop : UInt32) : Node
   fun ts_node_eq(node : Node, other : Node) : Bool
+
+  fun ts_tree_cursor_new(node : Node) : TreeCursor
+  fun ts_tree_cursor_delete(cursor : TreeCursor*)
+  fun ts_tree_cursor_current_node(cursor : TreeCursor*) : Node
+  fun ts_tree_cursor_goto_first_child(cursor : TreeCursor*) : Bool
+  fun ts_tree_cursor_goto_next_sibling(cursor : TreeCursor*) : Bool
+  fun ts_tree_cursor_goto_parent(cursor : TreeCursor*) : Bool
 
   fun ts_query_new(language : Void*, source : UInt8*, length : UInt32, error_offset : UInt32*, error_type : QueryError*) : Void*
   fun ts_query_delete(query : Void*)

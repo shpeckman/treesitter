@@ -93,6 +93,7 @@ Offsets are bytes into UTF-8 text. A `Point` is a zero-based row and a byte colu
 | Tree     | `parent`, `child(i)`, `child_count`, `named_child(i)`, `named_child_count`, `field(name)`                   |
 | Siblings | `next_sibling`, `previous_sibling`, `next_named_sibling`, `previous_named_sibling`                          |
 | Search   | `descendant(from, to)`, `named_descendant(from, to)`: the smallest node spanning a byte range               |
+| Walk     | `each_child`, `each_named_child`, `each_descendant`: the node and everything below it, each before its children |
 
 ### Queries
 

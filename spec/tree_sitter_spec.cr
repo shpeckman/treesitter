@@ -160,6 +160,50 @@ describe TreeSitter::Parser do
     root.named_descendant(6, 6).not_nil!.range.should eq(5...7)
     root.descendant(3, 3).not_nil!.type.should eq(",")
   end
+
+  it "walks children and descendants in document order" do
+    root  = TreeSitter::Parser.new(JSON_GRAMMAR).parse(%({"a": [1, 2], "b": null})).root
+    array = root.named_descendant(7, 8).not_nil!.parent.not_nil!
+    array.type.should eq("array")
+
+    children = [] of TreeSitter::Node
+    array.each_child { |child| children << child }
+    children.should eq((0...array.child_count).map { |index| array.child(index).not_nil! })
+    children.map(&.type).should eq(["[", "number", ",", "number", "]"])
+
+    named = [] of TreeSitter::Node
+    array.each_named_child { |child| named << child }
+    named.should eq((0...array.named_child_count).map { |index| array.named_child(index).not_nil! })
+
+    expected = [] of TreeSitter::Node
+    recurse = uninitialized Proc(TreeSitter::Node, Nil)
+    recurse = ->(node : TreeSitter::Node) do
+      expected << node
+      node.child_count.times { |index| recurse.call(node.child(index).not_nil!) }
+    end
+    recurse.call(root)
+    walked = [] of TreeSitter::Node
+    root.each_descendant { |node| walked << node }
+    walked.should eq(expected)
+
+    inside = [] of TreeSitter::Node
+    array.each_descendant { |node| inside << node }
+    inside.first.should eq(array)
+    inside.map(&.type).should eq(["array", "[", "number", ",", "number", "]"])
+
+    leaf = [] of TreeSitter::Node
+    children.first.each_descendant { |node| leaf << node }
+    leaf.should eq([children.first])
+    children.first.each_child { fail "a leaf has no children" }
+  end
+
+  it "stops a walk on break" do
+    root  = TreeSitter::Parser.new(JSON_GRAMMAR).parse("[1, 2, 3]").root
+    found = root.each_descendant { |node| break node if node.type == "number" }
+    found.not_nil!.range.should eq(1...2)
+    first = root.named_child(0).not_nil!.each_child { |child| break child }
+    first.not_nil!.type.should eq("[")
+  end
 end
 
 describe TreeSitter::Query do
