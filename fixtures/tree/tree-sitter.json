@@ -1,0 +1,15 @@
+{
+  "grammars": [
+    {
+      "name": "tree",
+      "camelcase": "Tree",
+      "scope": "source.tree",
+      "file-types": [
+        "tree"
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0"
+  }
+}

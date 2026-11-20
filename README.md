@@ -136,12 +136,20 @@ one): `(#set! injection.language "lua")` gives `{"injection.language" => "lua"}`
 
 ## Spec fixture
 
-`require "treesitter/fixture"` (not loaded by `require "treesitter"`) adds `TreeSitter::Fixture`. It compiles the bundled JSON grammar (`fixtures/json`, MIT, from tree-sitter-json) with `cc` into a temporary directory on first use:
+`require "treesitter/fixture"` (not loaded by `require "treesitter"`) adds `TreeSitter::Fixture`. It compiles bundled grammars with `cc` into a temporary directory on first use:
 
 ```crystal
 json = TreeSitter::Fixture.language("json")
-TreeSitter::Fixture.library("json")   # path of the compiled .so
+tree = TreeSitter::Fixture.language("tree")
+TreeSitter::Fixture.library("tree")   # path of the compiled .so
 TreeSitter::Fixture.clean             # removes the compiled libraries
+```
+
+The JSON grammar (`fixtures/json`, MIT) comes from tree-sitter-json. The directory-tree grammar (`fixtures/tree`) includes its `grammar.js` source, highlight queries, corpus tests, and a full example. Regenerate its ABI-14 parser with:
+
+```sh
+cd fixtures/tree
+npx --yes tree-sitter-cli@0.25.10 generate --abi 14 -o . grammar.js
 ```
 
 ## License

@@ -11,7 +11,7 @@ module TreeSitter
     # :nodoc:
     SOURCES = File.expand_path("../fixtures", __DIR__)
 
-    # The shared library of the bundled grammar *name* (`"json"`), compiled on first use; raises `Error` when `cc` fails.
+    # The shared library of the bundled grammar *name* (`"json"` or `"tree"`), compiled on first use; raises `Error` when `cc` fails.
     def self.library(name : String) : String
       path = File.join(DIRECTORY, "#{name}.so")
       return path if File.exists?(path)

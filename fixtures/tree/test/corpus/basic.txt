@@ -1,0 +1,43 @@
+==================
+Root and entries
+==================
+
+.
+├─╴src/
+│  ├─╴apprt.cr                  entry point
+│  ╰─╴binding.cr
+╰─╴test/
+
+---
+
+(document
+  (root)
+  (entry (branch) (directory))
+  (entry (guide) (branch) (file) (description))
+  (entry (guide) (branch) (file))
+  (entry (branch) (directory)))
+
+==================
+Abbreviated file range
+==================
+
+├─╴adw … pango.cr      generated files
+
+---
+
+(document
+  (entry
+    (branch)
+    (abbreviation (file) (ellipsis) (file))
+    (description)))
+
+==================
+No trailing newline
+==================
+
+╰─╴window_style.cr
+
+---
+
+(document
+  (entry (branch) (file)))

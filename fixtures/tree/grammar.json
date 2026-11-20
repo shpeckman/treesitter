@@ -1,0 +1,236 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/grammar.schema.json",
+  "name": "tree",
+  "rules": {
+    "document": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_newline"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "CHOICE",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "root"
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "entry"
+                  }
+                ]
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_newline"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "root"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "entry"
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "root": {
+      "type": "STRING",
+      "value": "."
+    },
+    "entry": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "guide"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "_indent"
+              }
+            ]
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "branch"
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": " "
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "path",
+          "content": {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "abbreviation"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "directory"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "file"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SEQ",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_description_separator"
+                },
+                {
+                  "type": "FIELD",
+                  "name": "description",
+                  "content": {
+                    "type": "SYMBOL",
+                    "name": "description"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "guide": {
+      "type": "STRING",
+      "value": "│"
+    },
+    "branch": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "├─╴"
+        },
+        {
+          "type": "STRING",
+          "value": "╰─╴"
+        }
+      ]
+    },
+    "directory": {
+      "type": "PATTERN",
+      "value": "[^\\s\\/]+\\/"
+    },
+    "file": {
+      "type": "PATTERN",
+      "value": "[^\\s\\/…]+"
+    },
+    "abbreviation": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "from",
+          "content": {
+            "type": "SYMBOL",
+            "name": "file"
+          }
+        },
+        {
+          "type": "STRING",
+          "value": " "
+        },
+        {
+          "type": "SYMBOL",
+          "name": "ellipsis"
+        },
+        {
+          "type": "STRING",
+          "value": " "
+        },
+        {
+          "type": "FIELD",
+          "name": "to",
+          "content": {
+            "type": "SYMBOL",
+            "name": "file"
+          }
+        }
+      ]
+    },
+    "ellipsis": {
+      "type": "STRING",
+      "value": "…"
+    },
+    "description": {
+      "type": "PATTERN",
+      "value": "\\S[^\\r\\n]*"
+    },
+    "_indent": {
+      "type": "PATTERN",
+      "value": " +"
+    },
+    "_description_separator": {
+      "type": "PATTERN",
+      "value": "  +"
+    },
+    "_newline": {
+      "type": "PATTERN",
+      "value": "\\r?\\n"
+    }
+  },
+  "extras": [],
+  "conflicts": [],
+  "precedences": [],
+  "externals": [],
+  "inline": [],
+  "supertypes": [],
+  "reserved": {}
+}
